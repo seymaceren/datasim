@@ -167,9 +167,6 @@ poetry.toml
 # ruff
 .ruff_cache/
 
-# LSP config files
-pyrightconfig.json
-
 # Cached typings for type checker
 typings/
 
