@@ -6,6 +6,7 @@ channels:
 dependencies:
   - python>=3.12
   - pytest>=8.3.4
+  - pytest-md>=0.2.0
   - numpy>=2.2.3
   - pandas>=2.2.3
   # - dash>=3.0.1

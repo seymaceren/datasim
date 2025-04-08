@@ -23,7 +23,7 @@ jobs:
     - name: Install dependencies
       run: |
         conda env update --file environment.yml --name base
-        
+
   lint:
     needs: env
     runs-on: ubuntu-latest
@@ -32,7 +32,7 @@ jobs:
     steps:
     - name: Lint with flake8
       uses: py-actions/flake8@v2
-      
+
   type:
     needs: env
     runs-on: ubuntu-latest
@@ -41,7 +41,7 @@ jobs:
     steps:
     - name: Test strict typing with pyright
       uses: jakebailey/pyright-action@v2
-      
+
   test:
     needs: env
     runs-on: ubuntu-latest
@@ -54,7 +54,7 @@ jobs:
         timezoneLinux: 'Europe/Amsterdam'
     - name: Install pytest
       run: |
-        pip install pytest
+        pip install pytest-md
     - name: Test with pytest
       uses: pavelzw/pytest-action@v2
       with:
