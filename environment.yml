@@ -1,0 +1,14 @@
+name: datasim
+
+channels:
+  - conda-forge
+
+dependencies:
+  - numpy>=2.2.3
+  - pandas>=2.2.3
+  # - dash>=3.0.1
+  # - dash-bootstrap-components>=2.0.0
+  - streamlit>=1.43.2
+  - plotly>=5.24.1
+  - scipy>=1.15.1
+  - psutil>=5.9.0
