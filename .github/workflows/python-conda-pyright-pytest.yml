@@ -52,6 +52,9 @@ jobs:
       uses: szenius/set-timezone@v1.2
       with:
         timezoneLinux: 'Europe/Amsterdam'
+    - name: Install pytest
+      run: |
+        pip install pytest
     - name: Test with pytest
       uses: pavelzw/pytest-action@v2
       with:
