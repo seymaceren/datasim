@@ -1,4 +1,4 @@
-name: Python Test Typing and PyTest Unit Tests with Conda
+name: Python Linting, Typing and PyTest Unit Tests with Conda
 
 on:
   push:
@@ -55,4 +55,4 @@ jobs:
     - name: Test with pytest
       run: |
         pip install pytest
-        pytest
+        pytest -vv
