@@ -11,7 +11,7 @@ The code is meant to be as short as possible without too many bells and whistles
 
 At this point, the simulation is tied to a Streamlit dashboard. This will be optional in a later version.
 
-### Usage
+## Usage
 
 See sample code, the basic setup is:
 

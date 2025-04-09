@@ -1,4 +1,4 @@
-name: Python Linting, Typing and PyTest Unit Tests with Conda
+name: Linting, Typing, Docstrings, Unit Tests
 
 on:
   push:
