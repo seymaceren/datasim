@@ -41,6 +41,8 @@ class Plot:
         return index
 
     def append(self, index: int, x: float | str, y: float):
+        if len(self.data) <= index:
+            raise IndexError(f"Data trace {index} out of range, only {len(self.data)} traces registered")
         xs = self.data[index][0]
         if self.data_float(xs) and isinstance(x, float):
             xs.append(x)
@@ -48,7 +50,12 @@ class Plot:
             xs.append(x)
         self.data[index][1].append(y)
 
-    def _update(self, dashboard: Dashboard = st.session_state.dashboard):
+    def _update(self, dashboard: Optional[Dashboard] = None):
+        if dashboard is None:
+            if "dashboard" in st.session_state:
+                dashboard = cast(Dashboard, st.session_state.dashboard)
+            else:
+                return
         i: int = 0
         for (data_x, data_y) in self.data:
             if len(data_x) > 0:

@@ -4,8 +4,6 @@ from plotly.graph_objs._figure import Figure
 import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
 
-from .world import World
-
 
 class Dashboard():
     """TODO: summary.
@@ -15,6 +13,7 @@ class Dashboard():
 
     def __init__(self):
         """Dashboard is created during sim initialization."""
+        from .world import World
         if not World.current:
             return
 
@@ -26,11 +25,12 @@ class Dashboard():
         self.start_time = monotonic()
 
     def _draw(self):
+        from .world import World
         if not World.current:
             return
 
         world: World = World.current
-        world.update_plots()
+        world._update_plots()
         for plot_id in self.plots:
             if plot_id not in self.frames:
                 self.frames[plot_id] = st.empty()

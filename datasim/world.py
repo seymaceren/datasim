@@ -45,7 +45,6 @@ class World(ABC):
 
         stdout.reconfigure(encoding='utf-8')  # type: ignore
         print(codecs.open("header", "r", "utf-8").read())
-        print(f"World '{self.title}' created.\n\n")
 
         if not self.dashboard:
             self.dashboard = Dashboard()
@@ -104,13 +103,9 @@ class World(ABC):
         self.sim_thread = Thread(target=self._simulation_thread)
         self.sim_thread.start()
 
-    def update_plots(self):
-        """Update data for plots during of right after the simulation run.
-
-        Raises:
-            NotImplementedError: This function should be implemented by any subclasses.
-        """
-        raise NotImplementedError
+    def _update_plots(self):
+        for plot in self.plots.values():
+            plot._update()
 
     def pre_entities_tick(self):
         """Implement this function to run any code at the start of each tick, \
