@@ -54,6 +54,7 @@ class World(ABC):
             self.dashboard._draw()
 
     def add_plot(self, plot: Plot):
+        """Add a plot to the dashboard."""
         self.plots[plot.id] = plot
 
     def add(self, entity: Entity):
