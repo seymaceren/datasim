@@ -1,5 +1,7 @@
 # DataSim
 
+![example workflow](https://github.com/sabvdf/datasim/actions/workflows/python-conda-pyright-pytest.yml/badge.svg)
+
 Quick Python data generating simulation tool with readable code and optional dashboard.
 
 > [!WARNING]
