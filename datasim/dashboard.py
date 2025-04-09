@@ -4,7 +4,7 @@ from plotly.graph_objs._figure import Figure
 import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
 
-from world import World
+from .world import World
 
 
 class Dashboard():

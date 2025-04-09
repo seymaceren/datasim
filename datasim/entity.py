@@ -3,7 +3,7 @@ from typing import Final, Optional
 
 import numpy as np
 
-from state import State
+from .state import State
 
 
 class Entity(ABC):

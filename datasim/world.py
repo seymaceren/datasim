@@ -6,8 +6,8 @@ from threading import Thread
 from time import sleep
 from typing import Final, Optional, Self
 
-import simtime
-from entity import Entity
+from . import simtime
+from .entity import Entity
 
 
 class World(ABC):
