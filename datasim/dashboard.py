@@ -1,14 +1,20 @@
 from time import monotonic
-from typing import Dict, List
+from typing import Dict
 from plotly.graph_objs._figure import Figure
 import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
 
-from datasim.world import World
+from world import World
 
 
 class Dashboard():
+    """TODO: summary.
+
+    TODO: description.
+    """
+
     def __init__(self):
+        """Dashboard is created during sim initialization."""
         if not World.current:
             return
 
@@ -19,7 +25,7 @@ class Dashboard():
 
         self.start_time = monotonic()
 
-    def draw(self):
+    def _draw(self):
         if not World.current:
             return
 

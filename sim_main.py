@@ -3,11 +3,11 @@ from typing import Optional
 import streamlit as st
 
 from datasim import simtime
-from datasim.dashboard import Dashboard
-from datasim.world import World
+from datasim import Dashboard
+from datasim import World
 
 # Use this line to specify your main world class
-from icu import ICU as MainWorldClass
+from icu.icu import ICU as MainWorldClass
 
 
 @st.fragment(run_every=simtime.update_time)
@@ -16,7 +16,7 @@ def draw_dashboard():
     dash: Optional[Dashboard] = st.session_state.dashboard
     if not dash:
         return
-    dash.draw()
+    dash._draw()
 
     # Logic to let the dashboard update during the simulation,
     # and to stop rerunning the Streamlit fragment when the simulation has ended

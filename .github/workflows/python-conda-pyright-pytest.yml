@@ -29,6 +29,10 @@ jobs:
         max-line-length: 120
     - name: Test strict typing with pyright
       uses: jakebailey/pyright-action@v2
+    - name: Test docstrings according to PEP257
+      run: |
+        pip install pydocstyle
+        pydocstyle --add-ignore=D100 --add-select=D212 ./datasim
     - name: Set timezone
       uses: szenius/set-timezone@v1.2
       with:

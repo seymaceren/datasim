@@ -3,11 +3,12 @@ from typing import Dict, Optional, cast
 from plotly.graph_objs._figure import Figure
 import streamlit as st
 import plotly.express as px
-import plotly.figure_factory as ff
+# import plotly.figure_factory as ff
 
 from datasim import simtime
-from datasim.dashboard import Dashboard
-from datasim.world import World
+from datasim import Dashboard
+from datasim import World
+
 
 class ICU(World):
     def __init__(self):
@@ -22,9 +23,13 @@ class ICU(World):
         dash: Dashboard = st.session_state.dashboard
         if len(self.overview_data) > 0:
             if not self.overview_plot:
-                self.overview_plot = cast(Figure, px.line(x=list(self.overview_data.keys()), y=list(self.overview_data.values()), markers=True, title="ICU simulatie"))
+                self.overview_plot = cast(Figure,
+                                          px.line(x=list(self.overview_data.keys()),
+                                                  y=list(self.overview_data.values()),
+                                                  markers=True, title="ICU simulatie"))
             else:
-                self.overview_plot.update_traces(x=list(self.overview_data.keys()), y=list(self.overview_data.values()))
+                self.overview_plot.update_traces(x=list(self.overview_data.keys()),
+                                                 y=list(self.overview_data.values()))
             if "overview" not in dash.plots and self.overview_plot is not None:
                 dash.plots["overview"] = self.overview_plot
 
