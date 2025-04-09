@@ -25,6 +25,8 @@ jobs:
         conda env update --file environment.yml --name base
     - name: Lint with flake8
       uses: py-actions/flake8@v2
+      with:
+        max-line-length: 120
     - name: Test strict typing with pyright
       uses: jakebailey/pyright-action@v2
     - name: Set timezone
