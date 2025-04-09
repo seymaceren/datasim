@@ -1,4 +1,5 @@
 from abc import ABC
+import codecs
 from psutil import Process
 from os import getpid
 from sys import stdout
@@ -40,15 +41,7 @@ class World(ABC):
         simtime.tps = tps
 
         stdout.reconfigure(encoding='utf-8')  # type: ignore
-        print("\x1B[38;5;154m▝█▀▜\x1B[38;5;184m▖   \x1B[38;5;178m   ▗\x1B[38;5;214m▖   " +
-              "\x1B[38;5;208m   ▗\x1B[38;5;209m▛▀▀▖\x1B[38;5;204m ▄\n" +
-              "\x1B[38;5;154m █ \x1B[38;5;184m █ ▟\x1B[38;5;178m▀▜▖▗\x1B[38;5;214m▟▙▄ " +
-              "\x1B[38;5;208m▟▀▜▖\x1B[38;5;209m▝▙▄▄\x1B[38;5;204m ▗▄ \x1B[38;5;199m▜▛▚▛\x1B[38;5;164m▜▖\n" +
-              "\x1B[38;5;154m █\x1B[38;5;184m  █ \x1B[38;5;178m█ ▐▌\x1B[38;5;214m ▐▌ " +
-              "\x1B[38;5;208m █ ▐\x1B[38;5;209m▌   \x1B[38;5;204m▐▌ █\x1B[38;5;199m ▐▌▐\x1B[38;5;164m▌▐▌\n" +
-              "\x1B[38;5;154m▗\x1B[38;5;184m█▄▟▘\x1B[38;5;178m ▜▄▞\x1B[38;5;214m▙ ▝▙" +
-              "\x1B[38;5;208m▞ ▜▄\x1B[38;5;209m▞▙▝▄\x1B[38;5;204m▄▟▘▗\x1B[38;5;199m█▖▐▌\x1B[38;5;164m▐▌▐▌" +
-              "\x1B[0m\n")
+        print(codecs.open("header", "r", "utf-8").read())
         print(f"World '{self.title}' created.\n\n")
 
         if not self.dashboard:
@@ -130,7 +123,7 @@ class World(ABC):
 
         if self.end_tick > 0:
             print(f"{self.title}: Run for {self.end_tick / simtime.tps} seconds" +
-                  " ({self.end_tick} ticks at {simtime.tps} ticks/second)...")
+                  f" ({self.end_tick} ticks at {simtime.tps} ticks/second)...")
 
         self.last_update = 0
 
