@@ -5,10 +5,11 @@ from os import getpid
 from sys import stdout
 from threading import Thread
 from time import sleep
-from typing import Final, Optional, Self
+from typing import Dict, Final, List, Optional, Self
 
 from . import simtime
 from .entity import Entity
+from .plot import Plot
 
 
 class World(ABC):
@@ -19,7 +20,8 @@ class World(ABC):
 
     current: Optional[Self] = None
     title: Final[str]
-    entities: Final[list[Entity]]
+    entities: Final[List[Entity]]
+    plots: Final[Dict[str, Plot]]
 
     def __init__(self, title: str = "Unnamed Simulation", tps: float = 10.0):
         """Create the simulation world.
@@ -33,8 +35,9 @@ class World(ABC):
             print("(Warning: Not launching another instance)")
             return
         World.current = self
-        self.title: str = title
-        self.entities: list[Entity] = []
+        self.title = title
+        self.entities = []
+        self.plots = {}
         from datasim import Dashboard
         self.dashboard: Optional[Dashboard] = None
         self.ended: bool = False
@@ -50,6 +53,9 @@ class World(ABC):
     def _draw(self):
         if self.dashboard:
             self.dashboard._draw()
+
+    def add_plot(self, plot: Plot):
+        self.plots[plot.id] = plot
 
     def add(self, entity: Entity):
         """Add an entity to this `World`.
