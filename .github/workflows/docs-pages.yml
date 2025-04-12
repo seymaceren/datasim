@@ -20,28 +20,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  sphinx:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python 3.13
-      uses: actions/setup-python@v3
-      with:
-        python-version: '3.13'
-    - name: Add conda to system path
-      run: |
-        # $CONDA is an environment variable pointing to the root of the miniconda directory
-        echo $CONDA/bin >> $GITHUB_PATH
-    - name: Install dependencies
-      run: |
-        conda env update --file environment.yml --name base
-    - name: Generate documentation
-      run: |
-        cd docs
-        sphinx-build -M html source build
-
-  deploy:
-    needs: sphinx
+  build-deploy-docs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -49,6 +28,21 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.13'
+      - name: Add conda to system path
+        run: |
+          # $CONDA is an environment variable pointing to the root of the miniconda directory
+          echo $CONDA/bin >> $GITHUB_PATH
+      - name: Install dependencies
+        run: |
+          conda env update --file environment.yml --name base
+      - name: Generate documentation
+        run: |
+          cd docs
+          sphinx-build -M dirhtml source build
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
