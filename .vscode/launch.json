@@ -25,6 +25,19 @@
       ],
       "cwd": "${workspaceFolder}/docs",
       "console": "integratedTerminal"
+    },
+    {
+      "name": "Python: Run pydocstyle",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pydocstyle",
+      "args": [
+        "--add-ignore=D100",
+        "--add-select=D212",
+        "datasim"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal"
     }
   ]
 }
