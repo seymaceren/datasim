@@ -29,7 +29,7 @@ class World(ABC):
         Args:
             title (str, optional): Descriptive name of the simulation (world). Defaults to "Unnamed Simulation".
             tps (float, optional): Ticks per second (only in simulation time,
-                unless running `simulate` with `realtime=True`). Defaults to 10.0.
+                unless running `simulate()` with `realtime=True`). Defaults to 10.0.
         """
         if World.current:
             print("(Warning: Not launching another instance)")

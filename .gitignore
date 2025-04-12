@@ -1,3 +1,7 @@
+### OS things
+.DS_Store
+Thumbs.db
+
 ### Python ###
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -244,3 +248,10 @@ fabric.properties
 
 # vs code
 *.code-workspace
+
+# Generated docs
+docs/build/dirhtml/
+docs/build/doctrees/
+docs/source/_static/
+docs/source/_templates/
+docs/source/generated/

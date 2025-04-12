@@ -17,7 +17,7 @@ See sample code, the basic setup is:
 
 - Implement entities as subclasses of `datasim.Entity` and their behavior as subclasses of `datasim.State`
 - Implement a subclass of `datasim.World`
-  - Add any needed entities in `__init__` after calling `super().__init__("NAME_HERE")`
+  - Add any needed entities in `__init__()` after calling `super().__init__("NAME_HERE")`
   - Add plots in `update_plots()`.
 
 Run main.py
