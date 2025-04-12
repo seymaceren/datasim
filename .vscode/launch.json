@@ -11,6 +11,20 @@
       "program": "main.py",
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal"
+    },
+    {
+      "name": "Python: Build docs local",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "sphinx",
+      "args": [
+        "-M",
+        "html",
+        "source",
+        "build"
+      ],
+      "cwd": "${workspaceFolder}/docs",
+      "console": "integratedTerminal"
     }
   ]
 }

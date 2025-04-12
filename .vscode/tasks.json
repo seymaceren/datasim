@@ -16,19 +16,6 @@
         "kind": "build",
         "isDefault": true
       }
-    },
-    {
-      "label": "Build pydocs",
-      "type": "shell",
-      "command": "python",
-      "args": [
-        "-m",
-        "pydoc",
-        "datasim",
-        "-w",
-        "docs"
-      ],
-      "problemMatcher": []
     }
   ]
 }
