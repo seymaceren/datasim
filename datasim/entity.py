@@ -67,3 +67,6 @@ class Entity(ABC):
             self.state.tick()
             if self.state.switch_to:
                 self.state = self.state.switch_to
+
+    def __repr__(self):
+        return "Unnamed Entity" if self.name is None else f"Entity {self.name}"

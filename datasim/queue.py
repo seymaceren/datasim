@@ -1,48 +1,69 @@
-from typing import Final, List
-from .entity import Entity
+from typing import Final, List, Tuple
 
 
-class Queue:
+class Queue[T, N: (int, float, None) = None]:
     """A queue for entities to wait for resource availability."""
 
     id: Final[str]
-    queue: Final[List[Entity]]
+    queue: Final[List[Tuple[T, N]]]
+    capacity: int
 
-    def __init__(self, id: str):
+    def __init__(self, id: str, capacity: int = 0):
         """Create a waiting queue for entities.
 
         Args:
             id (str): Identifier / name of the queue.
+            capacity (int): Maximum queue length. Defaults to 0 for no maximum.
         """
         self.id = id
+        self.capacity = capacity
         self.queue = []
 
-    def enqueue(self, entity: Entity):
+    @property
+    def full(self):
+        return 0 < self.capacity <= len(self.queue)
+
+    def enqueue(self, entity: T, amount: N = None) -> bool:
         """Put an entity at the end of the queue.
 
         Args:
-            entity (Entity): The entity to enqueue.
+            entity (T): The entity to enqueue.
                 Beware: If this entity is already in the list, it will be added another time.
-        """
-        self.queue.insert(0, entity)
+            amount (int or float, optional): The amount that the entity wants to take from the resource. Defaults to None.
 
-    def dequeue(self) -> Entity:
+        Returns:
+            bool:
+                If the entity was succesfully added to the queue.
+        """
+        if not self.full:
+            self.queue.insert(0, (entity, amount))
+            return True
+
+        return False
+
+    def dequeue(self) -> T | Tuple[T, N]:
         """Remove the entity from the front of the queue and returns it.
 
         Returns:
             Entity: The entity that was at the front of this queue.
         """
-        return self.queue.pop()
+        (e, a) = self.queue.pop()
+        if a is None:
+            return e
+        return (e, a)
 
-    def peek(self) -> Entity:
+    def peek(self) -> T | Tuple[T, N]:
         """Return the entity at the front of the queue without removing it.
 
         Returns:
             Entity: The entity at the front of this queue.
         """
-        return self.queue[-1]
+        (e, a) = self.queue[-1]
+        if a is None:
+            return e
+        return (e, a)
 
-    def prioritize(self, entity: Entity) -> bool:
+    def prioritize(self, entity: T) -> bool:
         """Pushes an entity to the front of the list.
 
         If the entity was not in the list, it will not be added;
@@ -51,8 +72,13 @@ class Queue:
         Args:
             entity (Entity): _description_
         """
-        if self.queue.remove(entity):
-            self.queue.append(entity)
+        (_, entry) = [(i, (e, a)) for i, (e, a) in enumerate(self.queue) if e is entity][0]
+        if self.queue.remove(entry):
+            self.queue.append(entry)
             return True
 
         return False
+
+    def __repr__(self):
+        return (f"Queue {self.id} length {len(self.queue)}" +
+                ("" if self.capacity == 0 else "/{self.capacity}"))
