@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Any, List, Optional
 
 from .entity import Entity
 from .queue import Queue
@@ -13,11 +13,12 @@ class Resource:
     that also takes time to use).
 
     Usage:
-        You can choose to make subclasses of `Resource` to automatically
-        more safely limit the types, or just create `Resource` objects directly,
-        using only `resource_type` do identify the kind of resource.
+        You can choose to make subclasses of :class:`Resource` to automatically
+        more safely limit the types, or just create :class:`Resource` objects directly,
+        using only :attr:`resource_type` do identify the kind of resource.
     """
 
+    world: Any
     id: str
     resource_type: str
     users: List[Optional[Entity]]
@@ -25,7 +26,7 @@ class Resource:
     capacity: int
     amount: int
 
-    def __init__(self, id: str, resource_type: str, slots: int = 1,
+    def __init__(self, world: Any, id: str, resource_type: str, slots: int = 1,
                  max_queue: int = 0, capacity: int = 0, start_amount: int = 0):
         """Create a resource.
 
@@ -34,11 +35,12 @@ class Resource:
             resource_type (str): Identifier of the resource in the pool.
             slots (int, optional): Number of possible simultaneous users.
                 If set to 0, the resource is a pure counter. Defaults to 1.
-            max_queue (int, optional): Size of optional queue of users who can wait
-                for the resource when occupied. Defaults to 0.
+            max_queue (int, optional): Size of optional queue of users who can automatically
+                (without a separate State) wait for the resource when occupied. Defaults to 0.
             capacity (int, optional): Optional maximum amount stored in the pool. No maximum if set to 0. Defaults to 0.
             start_amount (int, optional): Starting amount of resources in the pool. Defaults to 0.
         """
+        self.world = world
         self.id = id
         self.resource_type = resource_type
         self.users = [None] * slots

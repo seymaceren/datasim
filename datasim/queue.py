@@ -9,35 +9,50 @@ class Queue:
     queue: Final[List[Entity]]
 
     def __init__(self, id: str):
-        """TODO: write.
+        """Create a waiting queue for entities.
 
         Args:
-            id (str): _description_
+            id (str): Identifier / name of the queue.
         """
         self.id = id
         self.queue = []
 
     def enqueue(self, entity: Entity):
-        """TODO: write.
+        """Put an entity at the end of the queue.
 
         Args:
-            entity (Entity): _description_
+            entity (Entity): The entity to enqueue.
+                Beware: If this entity is already in the list, it will be added another time.
         """
         self.queue.insert(0, entity)
 
     def dequeue(self) -> Entity:
-        """TODO: write.
+        """Remove the entity from the front of the queue and returns it.
 
         Returns:
-            Entity: _description_
+            Entity: The entity that was at the front of this queue.
         """
         return self.queue.pop()
 
-    def prioritize(self, entity: Entity):
-        """TODO: write.
+    def peek(self) -> Entity:
+        """Return the entity at the front of the queue without removing it.
+
+        Returns:
+            Entity: The entity at the front of this queue.
+        """
+        return self.queue[-1]
+
+    def prioritize(self, entity: Entity) -> bool:
+        """Pushes an entity to the front of the list.
+
+        If the entity was not in the list, it will not be added;
+        If the entity is in the list more than once, the copy furthest to the back will be put at the front.
 
         Args:
             entity (Entity): _description_
         """
-        self.queue.remove(entity)
-        self.queue.append(entity)
+        if self.queue.remove(entity):
+            self.queue.append(entity)
+            return True
+
+        return False

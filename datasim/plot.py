@@ -1,7 +1,8 @@
 from abc import ABC
-from typing import List, Literal, Optional, cast
+from typing import Any, List, Literal, Optional, cast
 from numpy import ndarray
 from plotly.graph_objs._figure import Figure
+
 import plotly.express as px
 import streamlit as st
 
@@ -13,28 +14,22 @@ from .dashboard import Dashboard
 
 type PLOT_TYPE = Literal["scatter", "line", "bar", "pie"]
 
-type PlotObj = Optional[Plot]
-
 
 class PlotData(ABC):
-    """TODO: write.
+    """Abstract superclass of different types of data to plot."""
 
-    Args:
-        ABC (_type_): _description_
-    """
-
-    plot: PlotObj = None
     plot_type: PLOT_TYPE
     title: Optional[str]
     trace: Optional[Figure] = None
     dashboard: Optional[Dashboard] = None
+    plot: Optional[Any] = None
 
     def __init__(self, plot_type: PLOT_TYPE, title: Optional[str]):
-        """TODO: write.
+        """Create a data source to plot from.
 
         Args:
-            plot_type ("scatter", "line", "bar", "pie", optional): Type or chart to plot.
-            title (str, optional): Title to use over the plot.
+            plot_type ("scatter", "line", "bar", "pie"): Type or chart to plot.
+            title (str, optional): Title to use over the plot. Defaults to None.
         """
         self.plot_type = plot_type
         self.title = title
@@ -46,24 +41,20 @@ class PlotData(ABC):
 
 
 class XYPlotData(PlotData):
-    """TODO: write.
-
-    Args:
-        PlotData (_type_): _description_
-    """
+    """Data with x and y values as float."""
 
     data_x: List[float]
     data_y: List[float]
 
     def __init__(self, data_x: List[float] = [], data_y: List[float] = [],
                  plot_type: PLOT_TYPE = "line", title: Optional[str] = None):
-        """TODO: write.
+        """Create a data source from x and y lists of floats.
 
         Args:
-            data_x (List[float], optional): _description_. Defaults to [].
-            data_y (List[float], optional): _description_. Defaults to [].
-            plot_type (PLOT_TYPE, optional): _description_. Defaults to "line".
-            title (Optional[str], optional): _description_. Defaults to None.
+            data_x (List[float], optional): x values. Defaults to [] to start with an empty data set.
+            data_y (List[float], optional): y values. Defaults to [] to start with an empty data set.
+            plot_type ("scatter", "line", "bar", "pie", optional): Type of plot to show. Defaults to "line".
+            title (Optional[str], optional): Title to use over the plot. Defaults to None.
         """
         super().__init__(plot_type, title)
         self.data_x = data_x
@@ -110,24 +101,20 @@ class XYPlotData(PlotData):
 
 
 class CategoryPlotData(PlotData):
-    """TODO: write.
-
-    Args:
-        PlotData (_type_): _description_
-    """
+    """Data with named categories with float values."""
 
     labels: List[str]
     values: List[float]
 
     def __init__(self, data_x: List[str] = [], data_y: List[float] = [],
                  plot_type: PLOT_TYPE = "line", title: Optional[str] = None):
-        """TODO: write.
+        """Create a data source from x as categories and y as float values.
 
         Args:
-            data_x (List[str], optional): _description_. Defaults to [].
-            data_y (List[float], optional): _description_. Defaults to [].
-            plot_type (PLOT_TYPE, optional): _description_. Defaults to "line".
-            title (Optional[str], optional): _description_. Defaults to None.
+            data_x (List[str], optional): labels. Defaults to [] to start with an empty data set.
+            data_y (List[float], optional): values for each label. Defaults to [] to start with an empty data set.
+            plot_type ("scatter", "line", "bar", "pie", optional): Type of plot to show. Defaults to "line".
+            title (Optional[str], optional): Title to use over the plot. Defaults to None.
         """
         super().__init__(plot_type, title)
         self.data_x = data_x
@@ -145,46 +132,39 @@ class CategoryPlotData(PlotData):
 
 
 class NPPlotData(PlotData):
-    """TODO: write.
-
-    Args:
-        PlotData (_type_): _description_
-    """
+    """Data with Numpy array as source."""
 
     data: ndarray
 
     def __init__(self, data: ndarray,
                  plot_type: PLOT_TYPE = "line", title: Optional[str] = None):
-        """TODO: write.
+        """Create a data source from a Numpy array.
 
         Args:
-            data (ndarray): _description_
-            plot_type (PLOT_TYPE, optional): _description_. Defaults to "line".
-            title (Optional[str], optional): _description_. Defaults to None.
+            data (ndarray): Array of data points. Shape should correspond to the dimensions of the plot.
+            plot_type ("scatter", "line", "bar", "pie", optional): Type of plot to show. Defaults to "line".
+            title (Optional[str], optional): Title to use over the plot. Defaults to None.
         """
         super().__init__(plot_type, title)
         self.data = data
 
 
 class ResourcePlotData(PlotData):
-    """TODO: write.
-
-    Args:
-        PlotData (_type_): _description_
-    """
+    """Data source from watching the amount of a :class:`Resource`."""
 
     data: Resource
     frequency: int
 
     def __init__(self, data: Resource, frequency: int = 1,
                  plot_type: PLOT_TYPE = "line", title: Optional[str] = None):
-        """TODO: write.
+        """Create a data source from watching the amount of a :class:`Resource`.
 
         Args:
-            data (Resource): _description_
-            frequency (int, optional): _description_. Defaults to 1.
-            plot_type (PLOT_TYPE, optional): _description_. Defaults to "line".
-            title (Optional[str], optional): _description_. Defaults to None.
+            data (:class:`Resource`): Source :class:`Resource`.
+            frequency (int, optional): Frequency in ticks to add data points.
+                Defaults to 1, meaning a point gets added every tick.
+            plot_type ("scatter", "line", "bar", "pie", optional): Type of plot to show. Defaults to "line".
+            title (Optional[str], optional): Title to use over the plot. Defaults to None.
         """
         super().__init__(plot_type, title)
         self.data = data
@@ -192,24 +172,21 @@ class ResourcePlotData(PlotData):
 
 
 class QueuePlotData(PlotData):
-    """TODO: write.
-
-    Args:
-        PlotData (_type_): _description_
-    """
+    """Data source from watching the size of a :class:`Queue`."""
 
     data: Queue
     frequency: int
 
     def __init__(self, data: Queue, frequency: int = 1,
                  plot_type: PLOT_TYPE = "line", title: Optional[str] = None):
-        """TODO: write.
+        """Create a data source from watching the size of a :class:`Queue`.
 
         Args:
-            data (Queue): _description_
-            frequency (int, optional): _description_. Defaults to 1.
-            plot_type (PLOT_TYPE, optional): _description_. Defaults to "line".
-            title (Optional[str], optional): _description_. Defaults to None.
+            data (:class:`Queue`): Source :class:`Queue`.
+            frequency (int, optional): Frequency in ticks to add data points.
+                Defaults to 1, meaning a point gets added every tick.
+            plot_type ("scatter", "line", "bar", "pie", optional): Type of plot to show. Defaults to "line".
+            title (Optional[str], optional): Title to use over the plot. Defaults to None.
         """
         super().__init__(plot_type, title)
         self.data = data
@@ -217,24 +194,21 @@ class QueuePlotData(PlotData):
 
 
 class StatePlotData(PlotData):
-    """TODO: write.
-
-    Args:
-        PlotData (_type_): _description_
-    """
+    """Data source from watching the state of an :class:`Entity`."""
 
     data: Entity
     frequency: int
 
     def __init__(self, data: Entity, frequency: int = 1,
                  plot_type: PLOT_TYPE = "line", title: Optional[str] = None):
-        """TODO: write.
+        """Create a data source from watching the state of an :class:`Entity`.
 
         Args:
-            data (Entity): _description_
-            frequency (int, optional): _description_. Defaults to 1.
-            plot_type (PLOT_TYPE, optional): _description_. Defaults to "line".
-            title (Optional[str], optional): _description_. Defaults to None.
+            data (:class:`Entity`): Source :class:`Entity`.
+            frequency (int, optional): Frequency in ticks to add data points.
+                Defaults to 1, meaning a point gets added every tick.
+            plot_type ("scatter", "line", "bar", "pie", optional): Type of plot to show. Defaults to "line".
+            title (Optional[str], optional): Title to use over the plot. Defaults to None.
         """
         super().__init__(plot_type, title)
         self.data = data

@@ -29,7 +29,7 @@ class World(ABC):
         Args:
             title (str, optional): Descriptive name of the simulation (world). Defaults to "Unnamed Simulation".
             tps (float, optional): Ticks per second (only in simulation time,
-                unless running `simulate()` with `realtime=True`). Defaults to 10.0.
+                unless running :meth:`simulate()` with `realtime=True`). Defaults to 10.0.
         """
         if World.current:
             print("(Warning: Not launching another instance)")
@@ -58,7 +58,7 @@ class World(ABC):
         self.plots[plot.id] = plot
 
     def add(self, entity: Entity):
-        """Add an entity to this `World`.
+        """Add an entity to this :class:`World`.
 
         Args:
             entity (Entity): The entity to add.
@@ -66,7 +66,7 @@ class World(ABC):
         self.entities.append(entity)
 
     def remove(self, entity: Entity) -> bool:
-        """Remove an entity from this `World`.
+        """Remove an entity from this :class:`World`.
 
         Args:
             entity (Entity): The entity to remove.
@@ -86,7 +86,7 @@ class World(ABC):
 
         Args:
             tps (float, optional): Ticks per second (only in simulation time, unless `realtime=True`).
-                Defaults to `simtime.tps`.
+                Defaults to :data:`simtime.tps`.
             end_tick (int, optional): Tick count to end, unless set to 0. Defaults to 0.
             restart (bool, optional): Set to `True` if this is a restart. Defaults to False.
             realtime (bool, optional): Run the simulation in real seconds. Defaults to False.

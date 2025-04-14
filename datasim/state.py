@@ -3,9 +3,9 @@ from typing import Self
 
 
 class State(ABC):
-    """TODO: summary.
+    """The current behavior state of an :class:`Entity`.
 
-    TODO: description.
+    This should be the only place that entities execute behavior code.
     """
 
     name: str

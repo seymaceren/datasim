@@ -6,9 +6,9 @@ from streamlit.delta_generator import DeltaGenerator
 
 
 class Dashboard():
-    """TODO: summary.
+    """Dashboard to show the state and results of the simulation.
 
-    TODO: description.
+    Currently automatically runs on Streamlit.
     """
 
     def __init__(self):

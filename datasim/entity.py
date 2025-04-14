@@ -7,9 +7,9 @@ from .state import State
 
 
 class Entity(ABC):
-    """TODO: summary.
+    """An entity in the simulation world.
 
-    TODO: description.
+    This can be anything that exhibits behavior.
     """
 
     registry: Final[dict[type, int]] = {}
@@ -18,12 +18,13 @@ class Entity(ABC):
     state: Optional[State]
     location: Optional[np.typing.NDArray[np.float64]]
 
-    def __init__(self, name: Optional[str] = None, initial_state: Optional[State] = None):
+    def __init__(self, name: Optional[str] = None, initial_state: Optional[State | type[State]] = None):
         """Create an entity.
 
         Args:
             name (Optional[str], optional): Descriptive name of the entity. Defaults to None.
-            initial_state (Optional[State], optional): Initial state of the entity. Defaults to None,
+            initial_state (Optional[State], optional): Initial state of the entity. If using a type,
+                that type needs to have a constructor with only name as paramater. Defaults to None,
                 meaning no behavior will be executed.
         """
         # Give the entity a serial number
@@ -33,7 +34,10 @@ class Entity(ABC):
         if not name:
             name = f"{str(type(self))} {self.id:03}"
         self.name = name
-        self.state = initial_state
+        if isinstance(initial_state, State):
+            self.state = initial_state
+        elif isinstance(initial_state, type):
+            self.state = initial_state(initial_state.__name__)
 
     def set_state(self, new_state: State | type):
         """Change the state of the entity.
@@ -46,7 +50,7 @@ class Entity(ABC):
                 of that class will be created to execute update ticks.
 
         Raises:
-            TypeError: If the provided type is not a subclass of `State`.
+            TypeError: If the provided type is not a subclass of :class:`State`.
         """
         if isinstance(new_state, type):
             new_state = new_state()
