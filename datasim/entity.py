@@ -18,7 +18,11 @@ class Entity(ABC):
     state: Optional[State]
     location: Optional[np.typing.NDArray[np.float64]]
 
-    def __init__(self, name: Optional[str] = None, initial_state: Optional[State | type[State]] = None):
+    def __init__(
+        self,
+        name: Optional[str] = None,
+        initial_state: Optional[State | type[State]] = None,
+    ):
         """Create an entity.
 
         Args:

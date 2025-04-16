@@ -7,7 +7,7 @@ from datasim import Dashboard
 from datasim import World
 
 # Use this line to specify your main world class
-from icu.icu import ICU as MainWorldClass
+from examples.icu.icu import ICU as MainWorldClass
 
 
 @st.fragment(run_every=simtime.update_time)
@@ -28,7 +28,7 @@ def draw_dashboard():
             st.rerun()
 
 
-if 'world' not in st.session_state:
+if "world" not in st.session_state:
     if World.current:
         st.session_state.world = World.current
     else:

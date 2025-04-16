@@ -1,11 +1,10 @@
 DataSim documentation
 =====================
+This library provides a framework for generating data by running simulations.
 
 .. autosummary::
    :toctree: generated
 
-   datasim
-   :members:
    datasim.Dashboard
    :members:
    datasim.Entity
@@ -24,8 +23,6 @@ DataSim documentation
    :members:
 
 
-Indices and tables
-==================
+:ref:`genindex`
 
-* :ref:`genindex`
-* :ref:`search`
+:ref:`search`

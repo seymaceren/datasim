@@ -1,6 +1,5 @@
-def func(x):
-    return x + 1
+from datasim import simtime
 
 
-def test_answer():
-    assert func(3) == 4
+def test_time():
+    assert simtime.seconds() == 0.0

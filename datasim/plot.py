@@ -1,16 +1,16 @@
 from abc import ABC
-from typing import Any, List, Literal, Optional, cast
+from typing import Any, Generic, List, Literal, Optional, cast
 from numpy import ndarray
 from plotly.graph_objs._figure import Figure
 
 import plotly.express as px
 import streamlit as st
 
+from .dashboard import Dashboard
 from .entity import Entity
+from .types import Number
 from .queue import Queue
 from .resource import Resource
-
-from .dashboard import Dashboard
 
 type PLOT_TYPE = Literal["scatter", "line", "bar", "pie"]
 
@@ -46,8 +46,13 @@ class XYPlotData(PlotData):
     data_x: List[float]
     data_y: List[float]
 
-    def __init__(self, data_x: List[float] = [], data_y: List[float] = [],
-                 plot_type: PLOT_TYPE = "line", title: Optional[str] = None):
+    def __init__(
+        self,
+        data_x: List[float] = [],
+        data_y: List[float] = [],
+        plot_type: PLOT_TYPE = "line",
+        title: Optional[str] = None,
+    ):
         """Create a data source from x and y lists of floats.
 
         Args:
@@ -84,19 +89,28 @@ class XYPlotData(PlotData):
                     case "line":
                         self.trace = cast(
                             Figure,
-                            px.line(x=self.data_x, y=self.data_y,
-                                    markers=True, title=self.title))
+                            px.line(
+                                x=self.data_x,
+                                y=self.data_y,
+                                markers=True,
+                                title=self.title,
+                            ),
+                        )
                     case "pie":
                         pass
                     case "scatter":
                         self.trace = cast(
                             Figure,
-                            px.scatter(x=self.data_x, y=self.data_y,
-                                       title=self.title))
+                            px.scatter(x=self.data_x, y=self.data_y, title=self.title),
+                        )
             else:
                 self.trace.update_traces(x=self.data_x, y=self.data_y)
 
-            if self.plot and self.plot.id not in self.dashboard.plots and self.trace is not None:
+            if (
+                self.plot
+                and self.plot.id not in self.dashboard.plots
+                and self.trace is not None
+            ):
                 self.dashboard.plots[self.plot.id] = self.trace
 
 
@@ -106,8 +120,13 @@ class CategoryPlotData(PlotData):
     labels: List[str]
     values: List[float]
 
-    def __init__(self, data_x: List[str] = [], data_y: List[float] = [],
-                 plot_type: PLOT_TYPE = "line", title: Optional[str] = None):
+    def __init__(
+        self,
+        data_x: List[str] = [],
+        data_y: List[float] = [],
+        plot_type: PLOT_TYPE = "line",
+        title: Optional[str] = None,
+    ):
         """Create a data source from x as categories and y as float values.
 
         Args:
@@ -136,8 +155,9 @@ class NPPlotData(PlotData):
 
     data: ndarray
 
-    def __init__(self, data: ndarray,
-                 plot_type: PLOT_TYPE = "line", title: Optional[str] = None):
+    def __init__(
+        self, data: ndarray, plot_type: PLOT_TYPE = "line", title: Optional[str] = None
+    ):
         """Create a data source from a Numpy array.
 
         Args:
@@ -149,14 +169,19 @@ class NPPlotData(PlotData):
         self.data = data
 
 
-class ResourcePlotData(PlotData):
+class ResourcePlotData(Generic[Number], PlotData):
     """Data source from watching the amount of a :class:`Resource`."""
 
-    data: Resource
+    data: Resource[Number]
     frequency: int
 
-    def __init__(self, data: Resource, frequency: int = 1,
-                 plot_type: PLOT_TYPE = "line", title: Optional[str] = None):
+    def __init__(
+        self,
+        data: Resource[Number],
+        frequency: int = 1,
+        plot_type: PLOT_TYPE = "line",
+        title: Optional[str] = None,
+    ):
         """Create a data source from watching the amount of a :class:`Resource`.
 
         Args:
@@ -177,8 +202,13 @@ class QueuePlotData(PlotData):
     data: Queue
     frequency: int
 
-    def __init__(self, data: Queue, frequency: int = 1,
-                 plot_type: PLOT_TYPE = "line", title: Optional[str] = None):
+    def __init__(
+        self,
+        data: Queue,
+        frequency: int = 1,
+        plot_type: PLOT_TYPE = "line",
+        title: Optional[str] = None,
+    ):
         """Create a data source from watching the size of a :class:`Queue`.
 
         Args:
@@ -199,8 +229,13 @@ class StatePlotData(PlotData):
     data: Entity
     frequency: int
 
-    def __init__(self, data: Entity, frequency: int = 1,
-                 plot_type: PLOT_TYPE = "line", title: Optional[str] = None):
+    def __init__(
+        self,
+        data: Entity,
+        frequency: int = 1,
+        plot_type: PLOT_TYPE = "line",
+        title: Optional[str] = None,
+    ):
         """Create a data source from watching the state of an :class:`Entity`.
 
         Args:
@@ -215,7 +250,7 @@ class StatePlotData(PlotData):
         self.frequency = frequency
 
 
-class Plot():
+class Plot:
     """Base class for easily updating data for plots to be made on the dashboard."""
 
     id: str

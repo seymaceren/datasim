@@ -1,11 +1,15 @@
-from typing import Final, List, Tuple
+from typing import Final, Generic, List, Tuple, TypeVar
+
+from .types import Number
+
+EntityType = TypeVar("EntityType")
 
 
-class Queue[T, N: (int, float, None) = None]:
+class Queue(Generic[EntityType, Number]):
     """A queue for entities to wait for resource availability."""
 
     id: Final[str]
-    queue: Final[List[Tuple[T, N]]]
+    queue: Final[List[Tuple[EntityType, Number]]]
     capacity: int
 
     def __init__(self, id: str, capacity: int = 0):
@@ -23,13 +27,14 @@ class Queue[T, N: (int, float, None) = None]:
     def full(self):
         return 0 < self.capacity <= len(self.queue)
 
-    def enqueue(self, entity: T, amount: N = None) -> bool:
+    def enqueue(self, entity: EntityType, amount: Number = None) -> bool:
         """Put an entity at the end of the queue.
 
         Args:
             entity (T): The entity to enqueue.
                 Beware: If this entity is already in the list, it will be added another time.
-            amount (int or float, optional): The amount that the entity wants to take from the resource. Defaults to None.
+            amount (int or float, optional): The amount that the entity wants to take from the resource.
+                Defaults to None.
 
         Returns:
             bool:
@@ -41,7 +46,7 @@ class Queue[T, N: (int, float, None) = None]:
 
         return False
 
-    def dequeue(self) -> T | Tuple[T, N]:
+    def dequeue(self) -> EntityType | Tuple[EntityType, Number]:
         """Remove the entity from the front of the queue and returns it.
 
         Returns:
@@ -52,7 +57,7 @@ class Queue[T, N: (int, float, None) = None]:
             return e
         return (e, a)
 
-    def peek(self) -> T | Tuple[T, N]:
+    def peek(self) -> EntityType | Tuple[EntityType, Number]:
         """Return the entity at the front of the queue without removing it.
 
         Returns:
@@ -63,7 +68,7 @@ class Queue[T, N: (int, float, None) = None]:
             return e
         return (e, a)
 
-    def prioritize(self, entity: T) -> bool:
+    def prioritize(self, entity: EntityType) -> bool:
         """Pushes an entity to the front of the list.
 
         If the entity was not in the list, it will not be added;
@@ -72,7 +77,9 @@ class Queue[T, N: (int, float, None) = None]:
         Args:
             entity (Entity): _description_
         """
-        (_, entry) = [(i, (e, a)) for i, (e, a) in enumerate(self.queue) if e is entity][0]
+        (_, entry) = [
+            (i, (e, a)) for i, (e, a) in enumerate(self.queue) if e is entity
+        ][0]
         if self.queue.remove(entry):
             self.queue.append(entry)
             return True
@@ -80,5 +87,6 @@ class Queue[T, N: (int, float, None) = None]:
         return False
 
     def __repr__(self):
-        return (f"Queue {self.id} length {len(self.queue)}" +
-                ("" if self.capacity == 0 else "/{self.capacity}"))
+        return f"Queue {self.id} length {len(self.queue)}" + (
+            "" if self.capacity == 0 else "/{self.capacity}"
+        )

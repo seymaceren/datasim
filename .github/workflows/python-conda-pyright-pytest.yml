@@ -1,4 +1,4 @@
-name: Linting, Typing, Docstrings, Unit Tests
+name: Code quality & Unit tests
 
 on:
   push:

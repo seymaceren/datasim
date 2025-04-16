@@ -1,12 +1,12 @@
-from typing import Any, List, Literal, Optional
+from typing import Any, Dict, Generic, List, Literal, Optional
 
-from .entity import Entity
 from .queue import Queue
+from .types import Number
 
 type TAKE_RESULT = Literal["success", "depleted", "queued", "in_use"]
 
 
-class Resource[N: (int, float, None) = None]:
+class Resource(Generic[Number]):
     """Representation of a resource in the simulation.
 
     This can either be a storage location for an amount of things,
@@ -16,20 +16,34 @@ class Resource[N: (int, float, None) = None]:
 
     Usage:
         You can choose to make subclasses of :class:`Resource` to automatically
-        more safely limit the types, or just create :class:`Resource` objects directly,
-        using only :attr:`resource_type` do identify the kind of resource.
+        more safely limit the types and implement your own more complex usage logic,
+        or just create :class:`Resource` objects directly, using only :attr:`resource_type`
+        to identify the kind of resource, and set a single usage_time if more than 1 tick.
     """
 
     world: Any
     id: str
     resource_type: str
-    users: List[Optional[Entity]]
-    queue: Optional[Queue[Entity, N]]
-    capacity: N
-    amount: N
+    users: List[Any]
+    user_index: Dict[Any, int]
+    slots: int
+    usage_time: int
+    simple_time_left: List[int]
+    queue: Optional[Queue[Any, Number]]
+    capacity: Number
+    amount: Number
 
-    def __init__(self, world: Any, id: str, resource_type: str, slots: int = 1,
-                 max_queue: int = 0, capacity: N = 0, start_amount: N = 0):
+    def __init__(
+        self,
+        world: Any,
+        id: str,
+        resource_type: str,
+        slots: int = 1,
+        usage_time: int = 1,
+        max_queue: int = 0,
+        capacity: Number = 0,
+        start_amount: Number = 0,
+    ):
         """Create a resource.
 
         Args:
@@ -45,100 +59,152 @@ class Resource[N: (int, float, None) = None]:
         self.world = world
         self.id = id
         self.resource_type = resource_type
-        self.users = [None] * slots
-        self.queue = Queue[Entity, N](id, max_queue) if max_queue > 0 else None
+        self.users = []
+        self.user_index = {}
+        self.slots = slots
+        self.usage_time = usage_time
+        self.simple_time_left = []
+        self.queue = Queue[Any, Number](id, max_queue) if max_queue > 0 else None
         self.capacity = capacity
         self.amount = start_amount
+
+    def try_use(self, user: Any, amount: Number = None) -> TAKE_RESULT:
+        if self < amount:
+            if self.queue and self.queue.enqueue(user, amount):
+                return "queued"
+
+            return "depleted"
+
+        if self > 0:
+            if amount is None:
+                raise ValueError(
+                    f"{user} is trying to use a capacity Resource without requested amount"
+                )
+            self -= amount
+            return "success"
+        elif len(self.users) < self.slots:
+            self.users.append(user)
+            self.simple_time_left.append(self.usage_time)
+            from .state import UsingResourceState
+
+            user.set_state(UsingResourceState[Number](self))
+            return "success"
+        else:
+            if self.queue and self.queue.enqueue(user, amount):
+                return "queued"
+
+            return "depleted"
+
+    def usage_tick(self, user: Any):
+        """Override this function for more complex usage time than a flat number of seconds."""
+        index = self.user_index[user]
+        left = self.simple_time_left[index]
+        left -= 1
+        if left <= 0:
+            del self.users[index]
+            del self.simple_time_left[index]
+        else:
+            self.simple_time_left[index] = left
+
+    # region Utility functions
 
     def __eq__(self, other: object):
         if self is other:
             return True
         if self.amount is None:
             return other is None
-        return self.amount == other
+        if isinstance(other, int) or isinstance(other, float):
+            return self.amount == other
+        return False
 
     def __lt__(self, other: object):
-        if ((isinstance(self.amount, int) or isinstance(self.amount, float)) and
-            (isinstance(other, int) or isinstance(other, float))):
+        if (isinstance(self.amount, int) or isinstance(self.amount, float)) and (
+            isinstance(other, int) or isinstance(other, float)
+        ):
             return self.amount < other
         return False
 
     def __le__(self, other: object):
-        if ((isinstance(self.amount, int) or isinstance(self.amount, float)) and
-            (isinstance(other, int) or isinstance(other, float))):
-                return self.amount <= other
+        if (isinstance(self.amount, int) or isinstance(self.amount, float)) and (
+            isinstance(other, int) or isinstance(other, float)
+        ):
+            return self.amount <= other
         return False
 
     def __gt__(self, other: object):
-        if ((isinstance(self.amount, int) or isinstance(self.amount, float)) and
-            (isinstance(other, int) or isinstance(other, float))):
-                return self.amount > other
+        if (isinstance(self.amount, int) or isinstance(self.amount, float)) and (
+            isinstance(other, int) or isinstance(other, float)
+        ):
+            return self.amount > other
         return False
 
     def __ge__(self, other: object):
-        if ((isinstance(self.amount, int) or isinstance(self.amount, float)) and
-            (isinstance(other, int) or isinstance(other, float))):
-                return self.amount >= other
+        if other is None:
+            return False
+        if (isinstance(self.amount, int) or isinstance(self.amount, float)) and (
+            isinstance(other, int) or isinstance(other, float)
+        ):
+            return self.amount >= other
         return False
 
-    def __iadd__(self, other: N):
+    def __iadd__(self, other: Number):
         if other is None:
             return
         if isinstance(self.amount, int):
             self.amount += int(other)
-        if isinstance(self.amount, float):
+        elif isinstance(self.amount, float):
             self.amount += other
 
-    def __isub__(self, other: N):
+    def __isub__(self, other: Number):
         if other is None:
             return
         if isinstance(self.amount, int):
             self.amount -= int(other)
-        if isinstance(self.amount, float):
+        elif isinstance(self.amount, float):
             self.amount += other
 
-    def __imul__(self, other: N):
+    def __imul__(self, other: Number):
         if other is None:
             return
         if isinstance(self.amount, int):
             self.amount *= int(other)
-        if isinstance(self.amount, float):
+        elif isinstance(self.amount, float):
             self.amount *= other
 
-    def __itruediv__(self, other: N):
+    def __itruediv__(self, other: Number):
         if other is None:
             return
         if isinstance(self.amount, int):
             self.amount //= int(other)
-        if isinstance(self.amount, float):
+        elif isinstance(self.amount, float):
             self.amount /= other
 
-    def __ifloordiv__(self, other: N):
+    def __ifloordiv__(self, other: Number):
         if other is None:
             return
         if isinstance(self.amount, int):
             self.amount //= int(other)
-        if isinstance(self.amount, float):
+        elif isinstance(self.amount, float):
             self.amount //= other
 
-    def __imod__(self, other: N):
+    def __imod__(self, other: Number):
         if other is None:
             return
         if isinstance(self.amount, int):
             self.amount %= int(other)
-        if isinstance(self.amount, float):
+        elif isinstance(self.amount, float):
             self.amount %= other
 
-    def __ipow__(self, other: N):
+    def __ipow__(self, other: Number):
         if other is None:
             return
-        if isinstance(self.amount, int):
+        if self.amount is not None:
             self.amount **= other
 
     def __int__(self):
         if isinstance(self.amount, int):
             return self.amount
-        if isinstance(self.amount, float):
+        elif isinstance(self.amount, float):
             return int(self.amount)
         return 0
 
@@ -149,25 +215,11 @@ class Resource[N: (int, float, None) = None]:
             return self.amount
         return 0.0
 
-    def try_use(self, user: Entity, amount: N = None) -> TAKE_RESULT:
-        if self < amount:
-            if self.queue and self.queue.enqueue(user, amount):
-                return "queued"
-
-            return "depleted"
-
-        if self > 0:
-            if amount is None:
-                raise ValueError(f"{user} is trying to use a capacity Resource without requested amount")
-            self -= amount
-            return "success"
-        elif self.users.
-        else:
-            if self.queue and self.queue.enqueue(user, amount):
-                return "queued"
-
-            return "depleted"
-
     def __repr__(self):
-        return (f"Resource {self.id}" if self.id == self.resource_type else
-                f"Resource {self.id} of type {self.resource_type}")
+        return (
+            f"Resource {self.id}"
+            if self.id == self.resource_type
+            else f"Resource {self.id} of type {self.resource_type}"
+        )
+
+    # endregion

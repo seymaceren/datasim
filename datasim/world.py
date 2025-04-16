@@ -39,11 +39,12 @@ class World(ABC):
         self.entities = []
         self.plots = {}
         from datasim import Dashboard
+
         self.dashboard: Optional[Dashboard] = None
         self.ended: bool = False
         simtime.tps = tps
 
-        stdout.reconfigure(encoding='utf-8')  # type: ignore
+        stdout.reconfigure(encoding="utf-8")  # type: ignore
         print(codecs.open("header", "r", "utf-8").read())
 
         if not self.dashboard:
@@ -80,8 +81,14 @@ class World(ABC):
             return False
         return True
 
-    def simulate(self, tps: float = simtime.tps, end_tick: int = 0,
-                 restart: bool = False, realtime: bool = False, stop_server: bool = False):
+    def simulate(
+        self,
+        tps: float = simtime.tps,
+        end_tick: int = 0,
+        restart: bool = False,
+        realtime: bool = False,
+        stop_server: bool = False,
+    ):
         """Run the simulation.
 
         Args:
@@ -119,13 +126,17 @@ class World(ABC):
         pass
 
     def _simulation_thread(self):
-        print(f"\n{"#"*(36+len(self.title))}\n" +
-              f"###  {self.title}  ###  Starting simulation  ###\n" +
-              f"{"#"*(36+len(self.title))}\n")
+        print(
+            f"\n{"#"*(36+len(self.title))}\n"
+            + f"###  {self.title}  ###  Starting simulation  ###\n"
+            + f"{"#"*(36+len(self.title))}\n"
+        )
 
         if self.end_tick > 0:
-            print(f"{self.title}: Run for {self.end_tick / simtime.tps} seconds" +
-                  f" ({self.end_tick} ticks at {simtime.tps} ticks/second)...")
+            print(
+                f"{self.title}: Run for {self.end_tick / simtime.tps} seconds"
+                + f" ({self.end_tick} ticks at {simtime.tps} ticks/second)..."
+            )
 
         self.last_update = 0
 
@@ -139,9 +150,11 @@ class World(ABC):
                 sleep(self.tick_time)
 
         self.ended = True
-        print(f"\n{"#"*(34+len(self.title))}\n" +
-              f"###  {self.title}  ###  End of simulation  ###\n" +
-              f"{"#"*(34+len(self.title))}\n")
+        print(
+            f"\n{"#"*(34+len(self.title))}\n"
+            + f"###  {self.title}  ###  End of simulation  ###\n"
+            + f"{"#"*(34+len(self.title))}\n"
+        )
 
         simtime.update_time = 0.0
 

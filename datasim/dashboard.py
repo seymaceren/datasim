@@ -5,7 +5,7 @@ import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
 
 
-class Dashboard():
+class Dashboard:
     """Dashboard to show the state and results of the simulation.
 
     Currently automatically runs on Streamlit.
@@ -14,6 +14,7 @@ class Dashboard():
     def __init__(self):
         """Dashboard is created during sim initialization."""
         from .world import World
+
         if not World.current:
             return
 
@@ -26,6 +27,7 @@ class Dashboard():
 
     def _draw(self):
         from .world import World
+
         if not World.current:
             return
 
