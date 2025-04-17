@@ -27,6 +27,9 @@ class Queue(Generic[EntityType, Number]):
     def full(self):
         return 0 < self.capacity <= len(self.queue)
 
+    def __len__(self):
+        return len(self.queue)
+
     def enqueue(self, entity: EntityType, amount: Number = None) -> bool:
         """Put an entity at the end of the queue.
 

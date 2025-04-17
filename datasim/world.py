@@ -18,12 +18,13 @@ class World(ABC):
     A simulation should run in a subclass of World.
     """
 
+    headless: bool
     current: Optional[Self] = None
     title: Final[str]
     entities: Final[List[Entity]]
     plots: Final[Dict[str, Plot]]
 
-    def __init__(self, title: str = "Unnamed Simulation", tps: float = 10.0):
+    def __init__(self, title: str = "Unnamed Simulation", tps: float = 10.0, headless: bool = False):
         """Create the simulation world.
 
         Args:
@@ -45,9 +46,10 @@ class World(ABC):
         simtime.tps = tps
 
         stdout.reconfigure(encoding="utf-8")  # type: ignore
-        print(codecs.open("header", "r", "utf-8").read())
+        print(codecs.open("header", "r", "utf-8").read())  # Draw terminal logo
 
-        if not self.dashboard:
+        self.headless = headless
+        if not headless and not self.dashboard:
             self.dashboard = Dashboard()
 
     def _draw(self):
@@ -56,7 +58,9 @@ class World(ABC):
 
     def add_plot(self, plot: Plot):
         """Add a plot to the dashboard."""
-        self.plots[plot.id] = plot
+        if self.dashboard:
+            self.plots[plot.id] = plot
+            print("Plot added")
 
     def add(self, entity: Entity):
         """Add an entity to this :class:`World`.
@@ -145,6 +149,9 @@ class World(ABC):
             for entity in self.entities:
                 entity._tick()
             self.post_entities_tick()
+            if self.dashboard:
+                for plot in self.plots.values():
+                    plot._tick()
             simtime.ticks += 1
             if self.realtime:
                 sleep(self.tick_time)

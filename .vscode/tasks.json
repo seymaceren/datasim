@@ -9,7 +9,8 @@
       "command": "streamlit",
       "args": [
         "run",
-        "sim_main.py"
+        "sim_main.py",
+        "streamlit"
       ],
       "problemMatcher": [],
       "group": {

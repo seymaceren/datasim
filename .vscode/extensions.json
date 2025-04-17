@@ -4,6 +4,7 @@
         "ms-python.flake8",
         "github.vscode-github-actions",
         "fnando.linter",
-        "ms-python.black-formatter"
+        "ms-python.black-formatter",
+        "virtualplay.vibrant-semantics-dark"
     ]
 }

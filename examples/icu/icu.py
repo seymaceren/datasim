@@ -1,8 +1,16 @@
 import csv
-from math import sin
 from typing import List, Tuple
 
-from datasim import Plot, Queue, ResourcePlotData, Resource, simtime, World, XYPlotData
+from datasim import (
+    Plot,
+    Queue,
+    QueuePlotData,
+    Resource,
+    ResourcePlotData,
+    simtime,
+    World,
+    XYPlotData,
+)
 from .patient import Patient
 
 
@@ -12,15 +20,20 @@ class ICU(World):
     patients: List[Tuple[float, Patient]]
     patients_waiting: Queue[Patient]
 
-    def __init__(self):
-        super().__init__("ICU world")
+    def __init__(self, headless: bool = False):
+        super().__init__("ICU world", headless)
 
-        self.beds = Resource[int](self, "icu_beds", "bed", 4)
+        self.beds = Resource[int](self, "icu_beds", "beds", 4)
 
-        self.add_plot(Plot("beds", ResourcePlotData(self.beds)))
+        self.add_plot(
+            Plot(
+                "beds",
+                ResourcePlotData(self.beds, 1, "bar", "Beds in use", legend_y="beds"),
+            )
+        )
 
         self.patients = []
-        for row in csv.reader(open("simulatiedata.csv")):
+        for row in csv.reader(open("examples/icu/simulatiedata.csv")):
             if not (row[0]).isnumeric():
                 continue
             self.patients.append(
@@ -28,10 +41,18 @@ class ICU(World):
             )
         self.patients_waiting = Queue[Patient]("patients")
 
+        self.add_plot(
+            Plot(
+                "waiting",
+                QueuePlotData(self.patients_waiting, 1, "bar", "Patients waiting"),
+            )
+        )
+
     def pre_entities_tick(self):
-        while self.patients[0][0] >= simtime.seconds():
+        while len(self.patients) > 0 and self.patients[0][0] <= simtime.seconds():
             self.patients_waiting.enqueue(self.patients[0][1])
             self.patients.pop(0)
 
-    def post_entities_tick(self):
-        self.overview.append(simtime.seconds(), sin(simtime.seconds() * 5.0))
+    # def post_entities_tick(self):
+    # if not self.headless:
+    # self.overview.append(simtime.seconds(), simtime.seconds() * 5.0)

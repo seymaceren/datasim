@@ -1,11 +1,13 @@
 from abc import ABC
 from typing import Any, Generic, List, Literal, Optional, cast
 from numpy import ndarray
+from pandas import DataFrame
 from plotly.graph_objs._figure import Figure
 
 import plotly.express as px
 import streamlit as st
 
+from . import simtime
 from .dashboard import Dashboard
 from .entity import Entity
 from .types import Number
@@ -23,8 +25,17 @@ class PlotData(ABC):
     trace: Optional[Figure] = None
     dashboard: Optional[Dashboard] = None
     plot: Optional[Any] = None
+    data_frame: DataFrame
+    legend_x: str
+    legend_y: str
 
-    def __init__(self, plot_type: PLOT_TYPE, title: Optional[str]):
+    def __init__(
+        self,
+        plot_type: PLOT_TYPE,
+        title: Optional[str],
+        legend_x: str = "x",
+        legend_y: str = "y",
+    ):
         """Create a data source to plot from.
 
         Args:
@@ -33,18 +44,65 @@ class PlotData(ABC):
         """
         self.plot_type = plot_type
         self.title = title
+        self.legend_x = legend_x
+        self.legend_y = legend_y
 
     def _update_traces(self):
         if self.dashboard is None:
             if "dashboard" in st.session_state:
                 self.dashboard = cast(Dashboard, st.session_state.dashboard)
 
+        if self.dashboard is None:
+            return
+
+        match self.plot_type:
+            case "bar":
+                self.trace = cast(
+                    Figure,
+                    px.bar(
+                        self.data_frame,
+                        title=self.title,
+                        x=self.legend_x,
+                        y=self.legend_y,
+                    ),
+                )
+            case "line":
+                self.trace = cast(
+                    Figure,
+                    px.line(
+                        self.data_frame,
+                        markers=True,
+                        title=self.title,
+                        x=self.legend_x,
+                        y=self.legend_y,
+                    ),
+                )
+            case "pie":
+                pass
+            case "scatter":
+                self.trace = cast(
+                    Figure,
+                    px.scatter(
+                        self.data_frame,
+                        x=self.legend_x,
+                        y=self.legend_y,
+                        title=self.title,
+                    ),
+                )
+
+        if (
+            self.plot
+            and self.plot.id not in self.dashboard.plots
+            and self.trace is not None
+        ):
+            self.dashboard.plots[self.plot.id] = self.trace
+
+    def _tick(self):
+        pass
+
 
 class XYPlotData(PlotData):
     """Data with x and y values as float."""
-
-    data_x: List[float]
-    data_y: List[float]
 
     def __init__(
         self,
@@ -52,6 +110,8 @@ class XYPlotData(PlotData):
         data_y: List[float] = [],
         plot_type: PLOT_TYPE = "line",
         title: Optional[str] = None,
+        legend_x: str = "x",
+        legend_y: str = "y",
     ):
         """Create a data source from x and y lists of floats.
 
@@ -61,9 +121,8 @@ class XYPlotData(PlotData):
             plot_type ("scatter", "line", "bar", "pie", optional): Type of plot to show. Defaults to "line".
             title (Optional[str], optional): Title to use over the plot. Defaults to None.
         """
-        super().__init__(plot_type, title)
-        self.data_x = data_x
-        self.data_y = data_y
+        super().__init__(plot_type, title, legend_x, legend_y)
+        self.data_frame = DataFrame(zip(data_x, data_y), columns=[legend_x, legend_y])
 
     def append(self, x: float, y: float):
         """Add a data point to this data set.
@@ -72,46 +131,7 @@ class XYPlotData(PlotData):
             x (float): x value of the data point.
             y (float): y value of the data point.
         """
-        self.data_x.append(x)
-        self.data_y.append(y)
-
-    def _update_traces(self):
-        super()._update_traces()
-
-        if self.dashboard is None:
-            return
-
-        if len(self.data_x) > 0:
-            if not self.trace:
-                match self.plot_type:
-                    case "bar":
-                        pass
-                    case "line":
-                        self.trace = cast(
-                            Figure,
-                            px.line(
-                                x=self.data_x,
-                                y=self.data_y,
-                                markers=True,
-                                title=self.title,
-                            ),
-                        )
-                    case "pie":
-                        pass
-                    case "scatter":
-                        self.trace = cast(
-                            Figure,
-                            px.scatter(x=self.data_x, y=self.data_y, title=self.title),
-                        )
-            else:
-                self.trace.update_traces(x=self.data_x, y=self.data_y)
-
-            if (
-                self.plot
-                and self.plot.id not in self.dashboard.plots
-                and self.trace is not None
-            ):
-                self.dashboard.plots[self.plot.id] = self.trace
+        self.data_frame.loc[len(self.data_frame)] = [x, y]
 
 
 class CategoryPlotData(PlotData):
@@ -126,6 +146,8 @@ class CategoryPlotData(PlotData):
         data_y: List[float] = [],
         plot_type: PLOT_TYPE = "line",
         title: Optional[str] = None,
+        legend_x: str = "category",
+        legend_y: str = "value",
     ):
         """Create a data source from x as categories and y as float values.
 
@@ -135,7 +157,7 @@ class CategoryPlotData(PlotData):
             plot_type ("scatter", "line", "bar", "pie", optional): Type of plot to show. Defaults to "line".
             title (Optional[str], optional): Title to use over the plot. Defaults to None.
         """
-        super().__init__(plot_type, title)
+        super().__init__(plot_type, title, legend_x, legend_y)
         self.data_x = data_x
         self.data_y = data_y
 
@@ -156,7 +178,12 @@ class NPPlotData(PlotData):
     data: ndarray
 
     def __init__(
-        self, data: ndarray, plot_type: PLOT_TYPE = "line", title: Optional[str] = None
+        self,
+        data: ndarray,
+        plot_type: PLOT_TYPE = "line",
+        title: Optional[str] = None,
+        legend_x: str = "x",
+        legend_y: str = "y",
     ):
         """Create a data source from a Numpy array.
 
@@ -165,22 +192,24 @@ class NPPlotData(PlotData):
             plot_type ("scatter", "line", "bar", "pie", optional): Type of plot to show. Defaults to "line".
             title (Optional[str], optional): Title to use over the plot. Defaults to None.
         """
-        super().__init__(plot_type, title)
+        super().__init__(plot_type, title, legend_x, legend_y)
         self.data = data
 
 
 class ResourcePlotData(Generic[Number], PlotData):
     """Data source from watching the amount of a :class:`Resource`."""
 
-    data: Resource[Number]
+    source: Resource[Number]
     frequency: int
 
     def __init__(
         self,
-        data: Resource[Number],
+        source: Resource[Number],
         frequency: int = 1,
         plot_type: PLOT_TYPE = "line",
         title: Optional[str] = None,
+        legend_x: str = "seconds",
+        legend_y: str = "amount",
     ):
         """Create a data source from watching the amount of a :class:`Resource`.
 
@@ -191,23 +220,33 @@ class ResourcePlotData(Generic[Number], PlotData):
             plot_type ("scatter", "line", "bar", "pie", optional): Type of plot to show. Defaults to "line".
             title (Optional[str], optional): Title to use over the plot. Defaults to None.
         """
-        super().__init__(plot_type, title)
-        self.data = data
+        super().__init__(plot_type, title, legend_x, legend_y)
+        self.source = source
         self.frequency = frequency
+        self.data_frame = DataFrame(columns=[legend_x, legend_y])
+
+    def _tick(self):
+        if simtime.ticks % self.frequency == 0:
+            self.data_frame.loc[len(self.data_frame)] = [
+                simtime.seconds(),
+                self.source.amount,
+            ]
 
 
 class QueuePlotData(PlotData):
     """Data source from watching the size of a :class:`Queue`."""
 
-    data: Queue
+    source: Queue
     frequency: int
 
     def __init__(
         self,
-        data: Queue,
+        source: Queue,
         frequency: int = 1,
         plot_type: PLOT_TYPE = "line",
         title: Optional[str] = None,
+        legend_x: str = "seconds",
+        legend_y: str = "length",
     ):
         """Create a data source from watching the size of a :class:`Queue`.
 
@@ -218,9 +257,17 @@ class QueuePlotData(PlotData):
             plot_type ("scatter", "line", "bar", "pie", optional): Type of plot to show. Defaults to "line".
             title (Optional[str], optional): Title to use over the plot. Defaults to None.
         """
-        super().__init__(plot_type, title)
-        self.data = data
+        super().__init__(plot_type, title, legend_x, legend_y)
+        self.source = source
         self.frequency = frequency
+        self.data_frame = DataFrame(columns=[legend_x, legend_y])
+
+    def _tick(self):
+        if simtime.ticks % self.frequency == 0:
+            self.data_frame.loc[len(self.data_frame)] = [
+                simtime.seconds(),
+                len(self.source),
+            ]
 
 
 class StatePlotData(PlotData):
@@ -263,7 +310,7 @@ class Plot:
 
         Args:
             id (str): identifier, needs to be unique.
-            *args (PlotData): Data to start the plot with.
+            *args (:class:`PlotData`): Data to start the plot with.
         """
         self.id = id
         self.data = []
@@ -280,6 +327,10 @@ class Plot:
             tuple(list[float] | list[str], list[float]): Data set at index.
         """
         return self.data[key]
+
+    def _tick(self):
+        for data in self.data:
+            data._tick()
 
     def add_trace(self, data: PlotData) -> int:
         """Add a data trace to the plot.

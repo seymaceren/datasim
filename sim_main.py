@@ -1,3 +1,4 @@
+import sys
 from time import sleep
 from typing import Optional
 import streamlit as st
@@ -28,13 +29,17 @@ def draw_dashboard():
             st.rerun()
 
 
-if "world" not in st.session_state:
-    if World.current:
-        st.session_state.world = World.current
-    else:
-        st.session_state.world = MainWorldClass()
+if "streamlit" in sys.argv:
+    if "world" not in st.session_state:
+        if World.current:
+            st.session_state.world = World.current
+        else:
+            st.session_state.world = MainWorldClass()
 
-if type(st.session_state.world) is MainWorldClass:
-    st.session_state.world.simulate(end_tick=30, realtime=True, stop_server=True)
+    if type(st.session_state.world) is MainWorldClass:
+        st.session_state.world.simulate(end_tick=7000, stop_server=True)
 
-draw_dashboard()
+    draw_dashboard()
+
+else:
+    MainWorldClass(headless=True).simulate(end_tick=7000)
