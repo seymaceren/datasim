@@ -1,0 +1,16 @@
+# python>=3.13
+pytest>=8.3.4
+pytest-md>=0.2.0
+pytest-cov>=6.0.0
+flake8>=7.2.0
+pyright>=1.1.399
+pydocstyle>=6.3.0
+numpy>=2.2.3
+pandas>=2.2.3
+pandas-stubs>=2.2.3
+streamlit>=1.43.2
+plotly>=5.24.1
+scipy>=1.15.1
+psutil>=5.9.0
+sphinx>=8.2.3
+furo>=2024.8.6

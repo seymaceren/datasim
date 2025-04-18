@@ -32,17 +32,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - name: Add conda to system path
-        run: |
-          # $CONDA is an environment variable pointing to the root of the miniconda directory
-          echo $CONDA/bin >> $GITHUB_PATH
-      - name: Install dependencies
-        run: |
-          conda env update --file environment.yml --name base
       - name: Generate documentation
         run: |
           cd docs
-          $pythonLocation/python -m sphinx -M dirhtml source build
+          python -m sphinx -M dirhtml source build
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
