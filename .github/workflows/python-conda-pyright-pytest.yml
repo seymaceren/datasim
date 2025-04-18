@@ -1,0 +1,51 @@
+name: Code quality & Unit tests
+
+on:
+  push:
+    branches:
+    - main
+
+jobs:
+  lint-type-test:
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 5
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python 3.13
+      uses: actions/setup-python@v3
+      with:
+        python-version: '3.13'
+    - name: Add conda to system path
+      run: |
+        # $CONDA is an environment variable pointing to the root of the miniconda directory
+        echo $CONDA/bin >> $GITHUB_PATH
+    - name: Install dependencies
+      run: |
+        conda env update --file environment.yml --name base
+    - name: Lint with flake8
+      uses: py-actions/flake8@v2
+      with:
+        max-line-length: 120
+    - name: Test strict typing with pyright
+      uses: jakebailey/pyright-action@v2
+    - name: Test docstrings according to PEP257
+      run: |
+        pip install pydocstyle
+        pydocstyle --add-ignore=D100 --add-select=D212 ./datasim
+    - name: Set timezone
+      uses: szenius/set-timezone@v1.2
+      with:
+        timezoneLinux: 'Europe/Amsterdam'
+    - name: Install pytest
+      run: |
+        pip install pytest-md pytest-cov
+    - name: Run pytest
+      uses: pavelzw/pytest-action@v2
+      with:
+        emoji: false
+        verbose: false
+        job-summary: true
+        custom-arguments: '--cov=datasim/'
+    - name: Coveralls
+      uses: coverallsapp/github-action@v2
