@@ -42,7 +42,7 @@ jobs:
       - name: Generate documentation
         run: |
           cd docs
-          sphinx-build -M dirhtml source build
+          python -m sphinx -M dirhtml source build
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact

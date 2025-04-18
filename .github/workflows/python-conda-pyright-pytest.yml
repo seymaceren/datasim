@@ -30,7 +30,7 @@ jobs:
     - name: Test strict typing with pyright
       run: |
         pip install pyright
-        pyright --project pyrightconfig.json
+        python -m pyright --project pyrightconfig.json
     - name: Test docstrings according to PEP257
       run: |
         pip install pydocstyle
