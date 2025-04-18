@@ -3,7 +3,6 @@ from time import sleep
 from typing import Optional
 import streamlit as st
 
-from datasim import simtime
 from datasim import Dashboard
 from datasim import World
 
@@ -11,7 +10,7 @@ from datasim import World
 from examples.icu.icu import ICU as MainWorldClass
 
 
-@st.fragment(run_every=simtime.update_time)
+@st.fragment(run_every=World.update_time)
 def draw_dashboard():
     # Draw our dashboard if it has been initialized
     dash: Optional[Dashboard] = st.session_state.dashboard
@@ -21,11 +20,11 @@ def draw_dashboard():
 
     # Logic to let the dashboard update during the simulation,
     # and to stop rerunning the Streamlit fragment when the simulation has ended
-    if simtime.update_time and simtime.update_time > 0.0:
-        sleep(simtime.update_time)
+    if World.update_time and World.update_time > 0.0:
+        sleep(World.update_time)
     else:
-        if simtime.update_time == 0.0:
-            simtime.update_time = None
+        if World.update_time == 0.0:
+            World.update_time = None
             st.rerun()
 
 

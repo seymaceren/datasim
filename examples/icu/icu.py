@@ -7,7 +7,6 @@ from datasim import (
     QueuePlotData,
     Resource,
     ResourcePlotData,
-    simtime,
     World,
     XYPlotData,
 )
@@ -21,7 +20,7 @@ class ICU(World):
     patients_waiting: Queue[Patient]
 
     def __init__(self, headless: bool = False):
-        super().__init__("ICU world", headless)
+        super().__init__("ICU world", headless=headless)
 
         self.beds = Resource[int](self, "icu_beds", "beds", 4)
 
@@ -49,10 +48,10 @@ class ICU(World):
         )
 
     def pre_entities_tick(self):
-        while len(self.patients) > 0 and self.patients[0][0] <= simtime.seconds():
+        while len(self.patients) > 0 and self.patients[0][0] <= World.seconds():
             self.patients_waiting.enqueue(self.patients[0][1])
             self.patients.pop(0)
 
     # def post_entities_tick(self):
     # if not self.headless:
-    # self.overview.append(simtime.seconds(), simtime.seconds() * 5.0)
+    # self.overview.append(World.seconds(), World.seconds() * 5.0)

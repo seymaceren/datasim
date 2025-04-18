@@ -7,7 +7,6 @@ from plotly.graph_objs._figure import Figure
 import plotly.express as px
 import streamlit as st
 
-from . import simtime
 from .dashboard import Dashboard
 from .entity import Entity
 from .types import Number
@@ -226,9 +225,11 @@ class ResourcePlotData(Generic[Number], PlotData):
         self.data_frame = DataFrame(columns=[legend_x, legend_y])
 
     def _tick(self):
-        if simtime.ticks % self.frequency == 0:
+        from .world import World
+
+        if World.ticks % self.frequency == 0:
             self.data_frame.loc[len(self.data_frame)] = [
-                simtime.seconds(),
+                World.seconds(),
                 self.source.amount,
             ]
 
@@ -263,9 +264,11 @@ class QueuePlotData(PlotData):
         self.data_frame = DataFrame(columns=[legend_x, legend_y])
 
     def _tick(self):
-        if simtime.ticks % self.frequency == 0:
+        from .world import World
+
+        if World.ticks % self.frequency == 0:
             self.data_frame.loc[len(self.data_frame)] = [
-                simtime.seconds(),
+                World.seconds(),
                 len(self.source),
             ]
 

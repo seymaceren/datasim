@@ -35,8 +35,6 @@ This library provides a framework for generating data by running simulations.
    :members:
    datasim.World
    :members:
-   datasim.simtime
-   :members:
 
 
 :ref:`genindex`
