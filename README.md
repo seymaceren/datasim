@@ -1,8 +1,8 @@
 # DataSim
 
-![test status badge](https://github.com/sabvdf/datasim/actions/workflows/python-conda-pyright-pytest.yml/badge.svg)
-![docs status badge](https://github.com/sabvdf/datasim/actions/workflows/docs-pages.yml/badge.svg)
-![coverage badge](https://img.shields.io/coverallsCoverage/github/sabvdf/datasim)
+[![Test Status](https://github.com/sabvdf/datasim/actions/workflows/python-conda-pyright-pytest.yml/badge.svg)](https://github.com/sabvdf/datasim/actions/workflows/python-conda-pyright-pytest.yml)
+[![Docs Status](https://github.com/sabvdf/datasim/actions/workflows/docs-pages.yml/badge.svg)](https://github.com/sabvdf/datasim/actions/workflows/docs-pages.yml)
+[![Coverage Status](https://coveralls.io/repos/github/sabvdf/datasim/badge.svg?branch=main)](https://coveralls.io/github/sabvdf/datasim?branch=main)
 
 Quick Python data generating simulation tool with readable code and optional dashboard.
 
