@@ -1,5 +1,6 @@
 from abc import ABC
-from typing import Any, Generic, List, Literal, Optional, cast
+from enum import Enum
+from typing import Any, Generic, List, Optional, cast
 from numpy import ndarray
 from pandas import DataFrame
 from plotly.graph_objs._figure import Figure
@@ -13,13 +14,18 @@ from .types import Number
 from .queue import Queue
 from .resource import Resource
 
-type PLOT_TYPE = Literal["scatter", "line", "bar", "pie"]
+
+class PlotType(Enum):
+    bar = "bar"
+    line = "line"
+    pie = "pie"
+    scatter = "scatter"
 
 
 class PlotData(ABC):
     """Abstract superclass of different types of data to plot."""
 
-    plot_type: PLOT_TYPE
+    plot_type: PlotType
     title: Optional[str]
     trace: Optional[Figure] = None
     dashboard: Optional[Dashboard] = None
@@ -30,7 +36,7 @@ class PlotData(ABC):
 
     def __init__(
         self,
-        plot_type: PLOT_TYPE,
+        plot_type: PlotType,
         title: Optional[str],
         legend_x: str = "x",
         legend_y: str = "y",
@@ -107,7 +113,7 @@ class XYPlotData(PlotData):
         self,
         data_x: List[float] = [],
         data_y: List[float] = [],
-        plot_type: PLOT_TYPE = "line",
+        plot_type: PlotType = PlotType.line,
         title: Optional[str] = None,
         legend_x: str = "x",
         legend_y: str = "y",
@@ -143,7 +149,7 @@ class CategoryPlotData(PlotData):
         self,
         data_x: List[str] = [],
         data_y: List[float] = [],
-        plot_type: PLOT_TYPE = "line",
+        plot_type: PlotType = PlotType.line,
         title: Optional[str] = None,
         legend_x: str = "category",
         legend_y: str = "value",
@@ -179,7 +185,7 @@ class NPPlotData(PlotData):
     def __init__(
         self,
         data: ndarray,
-        plot_type: PLOT_TYPE = "line",
+        plot_type: PlotType = PlotType.line,
         title: Optional[str] = None,
         legend_x: str = "x",
         legend_y: str = "y",
@@ -205,7 +211,7 @@ class ResourcePlotData(Generic[Number], PlotData):
         self,
         source: Resource[Number],
         frequency: int = 1,
-        plot_type: PLOT_TYPE = "line",
+        plot_type: PlotType = PlotType.line,
         title: Optional[str] = None,
         legend_x: str = "seconds",
         legend_y: str = "amount",
@@ -244,7 +250,7 @@ class QueuePlotData(PlotData):
         self,
         source: Queue,
         frequency: int = 1,
-        plot_type: PLOT_TYPE = "line",
+        plot_type: PlotType = PlotType.line,
         title: Optional[str] = None,
         legend_x: str = "seconds",
         legend_y: str = "length",
@@ -283,7 +289,7 @@ class StatePlotData(PlotData):
         self,
         data: Entity,
         frequency: int = 1,
-        plot_type: PLOT_TYPE = "line",
+        plot_type: PlotType = PlotType.line,
         title: Optional[str] = None,
     ):
         """Create a data source from watching the state of an :class:`Entity`.

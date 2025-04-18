@@ -3,6 +3,7 @@ from typing import List, Tuple
 
 from datasim import (
     Plot,
+    PlotType,
     Queue,
     QueuePlotData,
     Resource,
@@ -27,7 +28,9 @@ class ICU(World):
         self.add_plot(
             Plot(
                 "beds",
-                ResourcePlotData(self.beds, 1, "bar", "Beds in use", legend_y="beds"),
+                ResourcePlotData(
+                    self.beds, 1, PlotType.bar, "Beds in use", legend_y="beds"
+                ),
             )
         )
 
@@ -43,7 +46,9 @@ class ICU(World):
         self.add_plot(
             Plot(
                 "waiting",
-                QueuePlotData(self.patients_waiting, 1, "bar", "Patients waiting"),
+                QueuePlotData(
+                    self.patients_waiting, 1, PlotType.bar, "Patients waiting"
+                ),
             )
         )
 
