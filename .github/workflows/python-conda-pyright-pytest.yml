@@ -13,7 +13,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python 3.13
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v5
       with:
         python-version: '3.13'
     - name: Add conda to system path
@@ -29,19 +29,19 @@ jobs:
         max-line-length: 120
     - name: Test strict typing with pyright
       run: |
-        pip install pyright
-        python -m pyright --project pyrightconfig.json
+        $pythonLocation/pip install pyright
+        $pythonLocation/python -m pyright --project pyrightconfig.json
     - name: Test docstrings according to PEP257
       run: |
-        pip install pydocstyle
-        pydocstyle --add-ignore=D100 --add-select=D212 ./datasim
+        $pythonLocation/pip install pydocstyle
+        $pythonLocation/pydocstyle --add-ignore=D100 --add-select=D212 ./datasim
     - name: Set timezone
       uses: szenius/set-timezone@v1.2
       with:
         timezoneLinux: 'Europe/Amsterdam'
     - name: Install pytest
       run: |
-        pip install pytest-md pytest-cov
+        $pythonLocation/pip install pytest-md pytest-cov
     - name: Run pytest
       uses: pavelzw/pytest-action@v2
       with:
