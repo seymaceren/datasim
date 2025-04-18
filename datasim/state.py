@@ -31,13 +31,21 @@ class State(ABC):
 
 
 class UsingResourceState(Generic[Number], State):
+    """State in which an Entity is using a :class:`Resource`."""
+
     resource: Resource[Number]
 
     def __init__(self, resource: Resource[Number]):
+        """Create a :class:`UsingResourceState` for the specified :class:`Resource`.
+
+        Args:
+            resource (:class:`Resource`): The :class:`Resource` being used.
+        """
         super().__init__(f"using {resource}")
         self.resource = resource
 
     def tick(self):
+        """Use the resource for one tick."""
         if self.entity is None:
             return
         self.resource.usage_tick(self.entity)

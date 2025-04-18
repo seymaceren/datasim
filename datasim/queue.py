@@ -24,10 +24,12 @@ class Queue(Generic[EntityType, Number]):
         self.queue = []
 
     @property
-    def full(self):
+    def full(self) -> bool:
+        """Check if the queue is full."""
         return 0 < self.capacity <= len(self.queue)
 
-    def __len__(self):
+    def __len__(self) -> int:
+        """Get the current length of the queue."""
         return len(self.queue)
 
     def enqueue(self, entity: EntityType, amount: Number = None) -> bool:
@@ -90,6 +92,7 @@ class Queue(Generic[EntityType, Number]):
         return False
 
     def __repr__(self):
+        """Get a string representation of this queue."""
         return f"Queue {self.id} length {len(self.queue)}" + (
             "" if self.capacity == 0 else "/{self.capacity}"
         )

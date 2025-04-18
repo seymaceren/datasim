@@ -73,4 +73,5 @@ class Entity(ABC):
                 self.state = self.state.switch_to
 
     def __repr__(self):
+        """Get a string representation of the entity."""
         return "Unnamed Entity" if self.name is None else f"Entity {self.name}"

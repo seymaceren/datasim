@@ -16,6 +16,8 @@ from .resource import Resource
 
 
 class PlotType(Enum):
+    """The type of plot to render."""
+
     bar = "bar"
     line = "line"
     pie = "pie"

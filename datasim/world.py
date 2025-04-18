@@ -64,10 +64,12 @@ class World(ABC):
 
     @staticmethod
     def reset():
+        """Reset the World so you can start a different simulation."""
         World.current = None
 
     @staticmethod
-    def seconds():
+    def seconds() -> float:
+        """Get the number of seconds elapsed in the simulation world."""
         return World.ticks / World.tps
 
     def _draw(self):
@@ -136,10 +138,12 @@ class World(ABC):
         return True
 
     def stop(self):
+        """Stop the simulation and wait for it to end."""
         self.stopped = True
         self.wait()
 
     def wait(self):
+        """Wait for the simulation to end."""
         if self.sim_thread:
             self.sim_thread.join()
 

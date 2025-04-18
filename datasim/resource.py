@@ -1,9 +1,17 @@
-from typing import Any, Dict, Generic, List, Literal, Optional
+from enum import Enum
+from typing import Any, Dict, Generic, List, Optional
 
 from .queue import Queue
 from .types import Number
 
-type TAKE_RESULT = Literal["success", "depleted", "queued", "in_use"]
+
+class UseResult(Enum):
+    """The result of a resource usage attempt."""
+
+    success = "success"
+    depleted = "depleted"
+    queued = "queued"
+    in_use = "in_use"
 
 
 class Resource(Generic[Number]):
@@ -68,32 +76,47 @@ class Resource(Generic[Number]):
         self.capacity = capacity
         self.amount = start_amount
 
-    def try_use(self, user: Any, amount: Number = None) -> TAKE_RESULT:
+    def try_use(self, user: Any, amount: Number = None) -> UseResult:
+        """Try to use the resource.
+
+        Taking a specified amount if this is a capacity resource,
+        and using a slot if there are slots.
+
+        Args:
+            user (:class:`Entity`): The :class:`Entity` trying to use the resource.
+            amount (`int` or `float`, optional): The amount to take. Defaults to None.
+
+        Raises:
+            `TypeError`: When trying to take from a capacity resource without specifying an amount.
+
+        Returns:
+            :class:`TakeResult`: The result of the attempt.
+        """
         if self < amount:
             if self.queue and self.queue.enqueue(user, amount):
-                return "queued"
+                return UseResult.queued
 
-            return "depleted"
+            return UseResult.depleted
 
         if self > 0:
             if amount is None:
-                raise ValueError(
+                raise TypeError(
                     f"{user} is trying to use a capacity Resource without requested amount"
                 )
             self -= amount
-            return "success"
+            return UseResult.success
         elif len(self.users) < self.slots:
             self.users.append(user)
             self.simple_time_left.append(self.usage_time)
             from .state import UsingResourceState
 
             user.set_state(UsingResourceState[Number](self))
-            return "success"
+            return UseResult.success
         else:
             if self.queue and self.queue.enqueue(user, amount):
-                return "queued"
+                return UseResult.queued
 
-            return "depleted"
+            return UseResult.depleted
 
     def usage_tick(self, user: Any):
         """Override this function for more complex usage time than a flat number of seconds."""
@@ -109,6 +132,7 @@ class Resource(Generic[Number]):
     # region Utility functions
 
     def __eq__(self, other: object):
+        """Check if the amount of the resource is equal to a number."""
         if self is other:
             return True
         if self.amount is None:
@@ -118,6 +142,7 @@ class Resource(Generic[Number]):
         return False
 
     def __lt__(self, other: object):
+        """Check if the amount of the resource is less than a number."""
         if (isinstance(self.amount, int) or isinstance(self.amount, float)) and (
             isinstance(other, int) or isinstance(other, float)
         ):
@@ -125,6 +150,7 @@ class Resource(Generic[Number]):
         return False
 
     def __le__(self, other: object):
+        """Check if the amount of the resource is less than or equal to a number."""
         if (isinstance(self.amount, int) or isinstance(self.amount, float)) and (
             isinstance(other, int) or isinstance(other, float)
         ):
@@ -132,6 +158,7 @@ class Resource(Generic[Number]):
         return False
 
     def __gt__(self, other: object):
+        """Check if the amount of the resource is greater than a number."""
         if (isinstance(self.amount, int) or isinstance(self.amount, float)) and (
             isinstance(other, int) or isinstance(other, float)
         ):
@@ -139,6 +166,7 @@ class Resource(Generic[Number]):
         return False
 
     def __ge__(self, other: object):
+        """Check if the amount of the resource is greater than or equal to a number."""
         if other is None:
             return False
         if (isinstance(self.amount, int) or isinstance(self.amount, float)) and (
@@ -148,6 +176,7 @@ class Resource(Generic[Number]):
         return False
 
     def __iadd__(self, other: Number):
+        """Add a number to the amount of the resource."""
         if other is None:
             return
         if isinstance(self.amount, int):
@@ -156,6 +185,7 @@ class Resource(Generic[Number]):
             self.amount += other
 
     def __isub__(self, other: Number):
+        """Subtract a number from the amount of the resource."""
         if other is None:
             return
         if isinstance(self.amount, int):
@@ -164,6 +194,7 @@ class Resource(Generic[Number]):
             self.amount += other
 
     def __imul__(self, other: Number):
+        """Multiply the amount of the resource by a number."""
         if other is None:
             return
         if isinstance(self.amount, int):
@@ -172,6 +203,7 @@ class Resource(Generic[Number]):
             self.amount *= other
 
     def __itruediv__(self, other: Number):
+        """Divide the amount of the resource by a number."""
         if other is None:
             return
         if isinstance(self.amount, int):
@@ -180,6 +212,7 @@ class Resource(Generic[Number]):
             self.amount /= other
 
     def __ifloordiv__(self, other: Number):
+        """Integer divide the amount of the resource by a number."""
         if other is None:
             return
         if isinstance(self.amount, int):
@@ -188,6 +221,7 @@ class Resource(Generic[Number]):
             self.amount //= other
 
     def __imod__(self, other: Number):
+        """Make the amount of the resource the modulus of a number."""
         if other is None:
             return
         if isinstance(self.amount, int):
@@ -196,26 +230,30 @@ class Resource(Generic[Number]):
             self.amount %= other
 
     def __ipow__(self, other: Number):
+        """Raise the amount of the resource by a power."""
         if other is None:
             return
         if self.amount is not None:
             self.amount **= other
 
     def __int__(self):
+        """Get the amount of this resourcce as an int. Returns -1 if the resource has no amount."""
         if isinstance(self.amount, int):
             return self.amount
         elif isinstance(self.amount, float):
             return int(self.amount)
-        return 0
+        return -1
 
     def __float__(self):
+        """Get the amount of this resourcce as a float. Returns -1.0 if the resource has no amount."""
         if isinstance(self.amount, int):
             return float(self.amount)
         if isinstance(self.amount, float):
             return self.amount
-        return 0.0
+        return -1.0
 
     def __repr__(self):
+        """Get a string representation of the resource."""
         return (
             f"Resource {self.id}"
             if self.id == self.resource_type
