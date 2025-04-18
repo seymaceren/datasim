@@ -28,7 +28,9 @@ jobs:
       with:
         max-line-length: 120
     - name: Test strict typing with pyright
-      uses: jakebailey/pyright-action@v2
+      run: |
+        pip install pyright
+        pyright --project pyrightconfig.json
     - name: Test docstrings according to PEP257
       run: |
         pip install pydocstyle
