@@ -10,6 +10,7 @@ dependencies:
   - pytest-cov>=6.0.0
   - numpy>=2.2.3
   - pandas>=2.2.3
+  - pandas-stubs>=2.2.3
   # - dash>=3.0.1
   # - dash-bootstrap-components>=2.0.0
   - streamlit>=1.43.2
