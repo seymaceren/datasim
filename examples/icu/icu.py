@@ -16,14 +16,14 @@ from .patient import Patient
 
 class ICU(World):
     overview: XYPlotData
-    beds: Resource[int]
+    beds: Resource
     patients: List[Tuple[float, Patient]]
     patients_waiting: Queue[Patient]
 
     def __init__(self, headless: bool = False):
         super().__init__("ICU world", headless=headless)
 
-        self.beds = Resource[int](self, "icu_beds", "beds", 4)
+        self.beds = Resource(self, "icu_beds", "beds", 4)
 
         self.add_plot(
             Plot(
@@ -56,6 +56,10 @@ class ICU(World):
         while len(self.patients) > 0 and self.patients[0][0] <= World.seconds():
             self.patients_waiting.enqueue(self.patients[0][1])
             self.patients.pop(0)
+
+        while not self.beds.occupied and not self.patients_waiting == 0:
+            next = self.patients_waiting.peek()
+            self.beds.try_use(next)
 
     # def post_entities_tick(self):
     # if not self.headless:

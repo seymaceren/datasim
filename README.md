@@ -11,7 +11,7 @@ Quick Python data generating simulation tool with readable code and optional das
 
 The code is meant to be as short as possible without too many bells and whistles, leaving anything other than the main simulation to external proven libraries.
 
-At this point, the simulation is tied to a Streamlit dashboard. This will be optional in a later version.
+The simulation is optionally tied to a Streamlit dashboard.
 
 ## API Documentation
 Auto-generated, on [sabvdf.github.io/datasim](https://sabvdf.github.io/datasim/)

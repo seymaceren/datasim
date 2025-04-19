@@ -49,8 +49,8 @@ class Resource(Generic[Number]):
         slots: int = 1,
         usage_time: int = 1,
         max_queue: int = 0,
-        capacity: Number = 0,
-        start_amount: Number = 0,
+        capacity: Number = None,
+        start_amount: Number = None,
     ):
         """Create a resource.
 
@@ -75,6 +75,10 @@ class Resource(Generic[Number]):
         self.queue = Queue[Any, Number](id, max_queue) if max_queue > 0 else None
         self.capacity = capacity
         self.amount = start_amount
+
+    @property
+    def occupied(self) -> bool:
+        return len(self.users) >= self.slots
 
     def try_use(self, user: Any, amount: Number = None) -> UseResult:
         """Try to use the resource.
@@ -105,7 +109,7 @@ class Resource(Generic[Number]):
                 )
             self -= amount
             return UseResult.success
-        elif len(self.users) < self.slots:
+        elif not self.occupied:
             self.users.append(user)
             self.simple_time_left.append(self.usage_time)
             from .state import UsingResourceState
