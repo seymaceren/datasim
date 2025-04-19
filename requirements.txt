@@ -14,3 +14,4 @@ scipy>=1.15.1
 psutil>=5.9.0
 sphinx>=8.2.3
 furo>=2024.8.6
+ordered_set>=4.1.0

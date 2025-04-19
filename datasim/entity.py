@@ -1,9 +1,7 @@
 from abc import ABC
-from typing import Final, Optional
+from typing import Any, Final, Optional, Self
 
 import numpy as np
-
-from .state import State
 
 
 class Entity(ABC):
@@ -15,13 +13,13 @@ class Entity(ABC):
     registry: Final[dict[type, int]] = {}
     id: Final[int]
     name: Final[str]
-    state: Optional[State]
+    state: Optional["State"]
     location: Optional[np.typing.NDArray[np.float64]]
 
     def __init__(
         self,
         name: Optional[str] = None,
-        initial_state: Optional[State | type[State]] = None,
+        initial_state: Optional["State | type[State]"] = None,
     ):
         """Create an entity.
 
@@ -43,7 +41,11 @@ class Entity(ABC):
         elif isinstance(initial_state, type):
             self.state = initial_state(initial_state.__name__)
 
-    def set_state(self, new_state: State | type):
+        if self.state:
+            self.state.switch_to = self.state
+            self.state.entity = self
+
+    def set_state(self, new_state: "State | type"):
         """Change the state of the entity.
 
         The new behavior will be executed starting at the next tick.
@@ -66,12 +68,46 @@ class Entity(ABC):
         else:
             self.state = new_state
 
+        if self.state:
+            self.state.entity = self
+
     def _tick(self):
         if self.state:
             self.state.tick()
             if self.state.switch_to != self.state:
+                print(
+                    f"{self}: {self.state.__class__.__name__} >> {self.state.switch_to.__class__.__name__}"
+                )
                 self.state = self.state.switch_to
+                if self.state:
+                    self.state.entity = self
+                    self.state.switch_to = self.state
 
     def __repr__(self):
         """Get a string representation of the entity."""
         return "Unnamed Entity" if self.name is None else f"Entity {self.name}"
+
+
+class State(ABC):
+    """The current behavior state of an :class:`Entity`.
+
+    This should be the only place that entities execute behavior code.
+    """
+
+    entity: Any = None
+    name: str
+    switch_to: Self | None
+
+    def __init__(self, name: str):
+        """Create a state object.
+
+        Args:
+            name (str): Descriptive name of this state.
+        """
+        self.name = name
+        self.switch_to = None
+
+    def tick(self):
+        """Implement this function to have the state execute any behavior \
+            for its entity."""
+        pass

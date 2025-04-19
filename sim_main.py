@@ -9,7 +9,7 @@ from examples.icu.icu import ICU as MainWorldClass
 
 if "streamlit" in sys.argv:
     if "world" not in st.session_state:
-        if World.current:
+        if World.active:
             st.session_state.world = World.current
         else:
             profiling = True

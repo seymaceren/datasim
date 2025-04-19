@@ -1,6 +1,6 @@
 from abc import ABC
 from enum import Enum
-from typing import Any, Generic, List, Optional, cast
+from typing import Any, List, Optional, cast
 from pandas import DataFrame
 from plotly.graph_objs._figure import Figure
 
@@ -10,7 +10,6 @@ import streamlit as st
 
 from .dashboard import Dashboard
 from .entity import Entity
-from .types import Number
 from .queue import Queue
 from .resource import Resource
 
@@ -249,15 +248,15 @@ class NPPlotData(PlotData):
         )
 
 
-class ResourcePlotData(Generic[Number], PlotData):
+class ResourcePlotData(PlotData):
     """Data source from watching the amount of a :class:`Resource`."""
 
-    source: Resource[Number]
+    source: Resource
     frequency: int
 
     def __init__(
         self,
-        source: Resource[Number],
+        source_id: str,
         frequency: int = 1,
         plot_type: PlotType = PlotType.line,
         title: Optional[str] = None,
@@ -273,8 +272,10 @@ class ResourcePlotData(Generic[Number], PlotData):
             plot_type ("scatter", "line", "bar", "pie", optional): Type of plot to show. Defaults to "line".
             title (Optional[str], optional): Title to use over the plot. Defaults to None.
         """
+        from .world import World
+
         super().__init__(plot_type, title, legend_x, legend_y)
-        self.source = source
+        self.source = World.current.resource(source_id)
         self.frequency = frequency
 
     def _tick(self):
@@ -294,7 +295,7 @@ class QueuePlotData(PlotData):
 
     def __init__(
         self,
-        source: Queue,
+        source_id: str,
         frequency: int = 1,
         plot_type: PlotType = PlotType.line,
         title: Optional[str] = None,
@@ -310,8 +311,10 @@ class QueuePlotData(PlotData):
             plot_type ("scatter", "line", "bar", "pie", optional): Type of plot to show. Defaults to "line".
             title (Optional[str], optional): Title to use over the plot. Defaults to None.
         """
+        from .world import World
+
         super().__init__(plot_type, title, legend_x, legend_y)
-        self.source = source
+        self.source = World.current.queue(source_id)
         self.frequency = frequency
 
     def _tick(self):

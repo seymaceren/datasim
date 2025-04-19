@@ -1,14 +1,17 @@
 from abc import ABC
 import codecs
+from ordered_set import OrderedSet
 from psutil import Process
 from os import getpid
 from sys import stdout
 from threading import Thread
 from time import sleep
-from typing import Dict, Final, List, Optional, Self
+from typing import Dict, Final, Optional, Self
 
 from .entity import Entity
 from .plot import Plot
+from .queue import Queue
+from .resource import Resource
 
 
 class World(ABC):
@@ -23,10 +26,13 @@ class World(ABC):
     update_time: float | None = 1.0
 
     headless: bool
-    current: Optional[Self] = None
+    active: bool = False
+    current: Self
     title: Final[str]
-    entities: Final[List[Entity]]
+    entities: Final[OrderedSet[Entity]]
     plots: Final[Dict[str, Plot]]
+    resources: Final[Dict[str, Resource]]
+    queues: Final[Dict[str, Queue]]
     stopped: bool = False
 
     def __init__(
@@ -42,13 +48,16 @@ class World(ABC):
             tps (float, optional): Ticks per second (only in simulation time,
                 unless running :meth:`simulate()` with `realtime=True`). Defaults to 10.0.
         """
-        if World.current:
+        if World.active:
             print("(Warning: Not launching another instance)")
             return
         World.current = self
+        World.active = True
         self.title = title
-        self.entities = []
+        self.entities = OrderedSet[Entity]([])
         self.plots = {}
+        self.resources = {}
+        self.queues = {}
         from datasim import Dashboard
 
         self.dashboard: Optional[Dashboard] = None
@@ -66,44 +75,59 @@ class World(ABC):
     @staticmethod
     def reset():
         """Reset the World so you can start a different simulation."""
-        World.current = None
+        World.active = False
 
     @staticmethod
     def seconds() -> float:
         """Get the number of seconds elapsed in the simulation world."""
         return World.ticks / World.tps
 
-    def _draw(self):
-        if self.dashboard:
-            self.dashboard._draw()
-
-    def add_plot(self, plot: Plot):
-        """Add a plot to the dashboard."""
-        # if self.dashboard:
-        self.plots[plot.id] = plot
-
-    def add(self, entity: Entity):
+    def add(self, obj: Entity | Resource | Queue):
         """Add an entity to this :class:`World`.
 
         Args:
-            entity (Entity): The entity to add.
+            obj (:class:`Entity` | :class:`Resource` | (:class:`Queue`): The entity, resource or queue to add.
         """
-        self.entities.append(entity)
+        if isinstance(obj, Entity):
+            self.entities.append(obj)
+        elif isinstance(obj, Resource):
+            self.resources[obj.id] = obj
+        elif isinstance(obj, Queue):
+            self.queues[obj.id] = obj
 
-    def remove(self, entity: Entity) -> bool:
+    def remove(self, obj: Entity | Resource | Queue) -> bool:
         """Remove an entity from this :class:`World`.
 
         Args:
-            entity (Entity): The entity to remove.
+            entity (:class:`Entity`): The entity to remove.
 
         Returns:
             bool: `True` if the entity was succesfully removed.
         """
         try:
-            self.entities.remove(entity)
+            if isinstance(obj, Entity):
+                self.entities.remove(obj)
+            elif isinstance(obj, Resource):
+                self.resources.pop(obj.id)
+            elif isinstance(obj, Queue):
+                self.queues.pop(obj.id)
         except ValueError:
             return False
         return True
+
+    def resource(self, key: str) -> Resource:
+        """Get a Resource by id."""
+        resource = self.resources.get(key, None)
+        if resource is not None:
+            return resource
+        raise KeyError(f"No resource with id '{key}' found!")
+
+    def queue(self, key: str) -> Queue:
+        """Get a Queue by id."""
+        queue = self.queues.get(key, None)
+        if queue is not None:
+            return queue
+        raise KeyError(f"No queue with id '{key}' found!")
 
     def simulate(
         self,
@@ -148,10 +172,6 @@ class World(ABC):
         """Wait for the simulation to end."""
         if self.sim_thread:
             self.sim_thread.join()
-
-    def _update_plots(self):
-        for plot in self.plots.values():
-            plot._update()
 
     def pre_entities_tick(self):
         """Implement this function to run any code at the start of each tick, \
@@ -204,3 +224,16 @@ class World(ABC):
             pid = getpid()
             p = Process(pid)
             p.terminate()
+
+    def _draw(self):
+        if self.dashboard:
+            self.dashboard._draw()
+
+    def _update_plots(self):
+        for plot in self.plots.values():
+            plot._update()
+
+    def add_plot(self, plot: Plot):
+        """Add a plot to the dashboard."""
+        # if self.dashboard:
+        self.plots[plot.id] = plot

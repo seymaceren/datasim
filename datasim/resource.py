@@ -1,6 +1,7 @@
 from enum import Enum
-from typing import Any, Dict, Generic, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
+from .entity import Entity, State
 from .queue import Queue
 from .types import Number
 
@@ -26,7 +27,7 @@ class UseResult(Enum):
                 return "Failed: Resource in use"
 
 
-class Resource(Generic[Number]):
+class Resource:
     """Representation of a resource in the simulation.
 
     This can either be a storage location for an amount of things,
@@ -44,12 +45,12 @@ class Resource(Generic[Number]):
     world: Any
     id: str
     resource_type: str
-    users: List[Any]
-    user_index: Dict[Any, int]
+    users: List[Entity]
+    user_index: Dict[Entity, int]
     slots: int
     usage_time: int
     simple_time_left: List[int]
-    queue: Optional[Queue[Any, Number]]
+    queue: Optional[Queue[Entity]]
     capacity: Number
     amount: Number
 
@@ -84,7 +85,7 @@ class Resource(Generic[Number]):
         self.slots = slots
         self.usage_time = usage_time
         self.simple_time_left = []
-        self.queue = Queue[Any, Number](id, max_queue) if max_queue > 0 else None
+        self.queue = Queue[Entity](id, max_queue) if max_queue > 0 else None
         self.capacity = capacity
         self.amount = start_amount
 
@@ -93,14 +94,16 @@ class Resource(Generic[Number]):
         """Check if the resource is fully occupied."""
         return len(self.users) >= self.slots
 
-    def try_use(self, user: Any, amount: Number = None) -> UseResult:
+    def try_use(
+        self, user: Entity | Tuple[Entity, Number], amount: Number = None
+    ) -> UseResult:
         """Try to use the resource.
 
         Taking a specified amount if this is a capacity resource,
         and using a slot if there are slots.
 
         Args:
-            user (:class:`Entity`): The :class:`Entity` trying to use the resource.
+            user (:class:`Entity`): The :class:`Entity` trying to use the resource, or a tuple with the amount included.
             amount (`int` or `float`, optional): The amount to take. Defaults to None.
 
         Raises:
@@ -109,6 +112,10 @@ class Resource(Generic[Number]):
         Returns:
             :class:`TakeResult`: The result of the attempt.
         """
+        if isinstance(user, tuple):
+            amount = user[1]
+            user = user[0]
+
         if self < amount:
             if self.queue and self.queue.enqueue(user, amount):
                 return UseResult.queued
@@ -124,10 +131,10 @@ class Resource(Generic[Number]):
             return UseResult.success
         elif not self.occupied:
             self.users.append(user)
+            self.user_index[user] = len(self.users) - 1
             self.simple_time_left.append(self.usage_time)
-            from .state import UsingResourceState
 
-            user.set_state(UsingResourceState[Number](self))
+            user.set_state(UsingResourceState(self))
             return UseResult.success
         else:
             if self.queue and self.queue.enqueue(user, amount):
@@ -135,7 +142,7 @@ class Resource(Generic[Number]):
 
             return UseResult.depleted
 
-    def usage_tick(self, user: Any) -> bool:
+    def usage_tick(self, user: Entity) -> bool:
         """Override this function for more complex usage time than a flat number of seconds."""
         index = self.user_index[user]
         left = self.simple_time_left[index]
@@ -156,9 +163,7 @@ class Resource(Generic[Number]):
             return True
         if self.amount is None:
             return other is None
-        if isinstance(other, int) or isinstance(other, float):
-            return self.amount == other
-        return False
+        return self.amount == other
 
     def __lt__(self, other: object):
         """Check if the amount of the resource is less than a number."""
@@ -280,3 +285,27 @@ class Resource(Generic[Number]):
         )
 
     # endregion
+
+
+class UsingResourceState(State):
+    """State in which an Entity is using a :class:`Resource`."""
+
+    from .resource import Resource
+
+    resource: Resource
+
+    def __init__(self, resource: Resource):
+        """Create a :class:`UsingResourceState` for the specified :class:`Resource`.
+
+        Args:
+            resource (:class:`Resource`): The :class:`Resource` being used.
+        """
+        super().__init__(f"using {resource}")
+        self.resource = resource
+
+    def tick(self):
+        """Use the resource for one tick."""
+        if self.entity is None:
+            raise ValueError("UsingResourceState has no entity set!")
+        if not self.resource.usage_tick(self.entity):
+            self.switch_to = None

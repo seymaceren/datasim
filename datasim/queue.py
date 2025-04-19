@@ -1,11 +1,12 @@
 from typing import Final, Generic, List, Tuple, TypeVar
 
+from .entity import Entity
 from .types import Number
 
-EntityType = TypeVar("EntityType")
+EntityType = TypeVar("EntityType", bound=Entity)
 
 
-class Queue(Generic[EntityType, Number]):
+class Queue(Generic[EntityType]):
     """A queue for entities to wait for resource availability."""
 
     id: Final[str]
@@ -66,16 +67,22 @@ class Queue(Generic[EntityType, Number]):
             return e
         return (e, a)
 
-    def peek(self) -> EntityType | Tuple[EntityType, Number]:
+    def peek(self) -> EntityType:
         """Return the entity at the front of the queue without removing it.
 
         Returns:
             Entity: The entity at the front of this queue.
         """
         (e, a) = self.queue[-1]
-        if a is None:
-            return e
-        return (e, a)
+        return e
+
+    def peek_with_amount(self) -> Tuple[EntityType, Number]:
+        """Return the entity at the front of the queue without removing it.
+
+        Returns:
+            Entity: The entity at the front of this queue.
+        """
+        return self.queue[-1]
 
     def prioritize(self, entity: EntityType) -> bool:
         """Pushes an entity to the front of the list.

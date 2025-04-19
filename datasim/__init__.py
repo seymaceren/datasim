@@ -1,12 +1,11 @@
 """This module provides a framework for generating data by running simulations."""
 
 from .dashboard import Dashboard
-from .entity import Entity
+from .entity import Entity, State
 from .plot import Plot, PlotType, PlotData, XYPlotData, CategoryPlotData, NPPlotData
 from .plot import ResourcePlotData, QueuePlotData, StatePlotData
 from .queue import Queue
-from .resource import Resource
-from .state import State, UsingResourceState
+from .resource import Resource, UseResult, UsingResourceState
 from .world import World
 
 __all__ = (
@@ -24,6 +23,7 @@ __all__ = (
     "Queue",
     "Resource",
     "State",
+    "UseResult",
     "UsingResourceState",
     "World",
 )

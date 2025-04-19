@@ -4,7 +4,20 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Run Streamlit DataSim",
+            "label": "Run without dashboard",
+            "type": "shell",
+            "command": "python",
+            "args": [
+                "sim_main.py"
+            ],
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Run with Streamlit",
             "type": "shell",
             "command": "streamlit",
             "args": [
@@ -13,10 +26,7 @@
                 "streamlit"
             ],
             "problemMatcher": [],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            }
+            "group": "build"
         }
     ]
 }

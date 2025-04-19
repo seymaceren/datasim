@@ -15,7 +15,7 @@ class Dashboard:
         """Dashboard is created during sim initialization."""
         from .world import World
 
-        if not World.current:
+        if not World.active:
             return
 
         st.session_state.dashboard = self
@@ -28,11 +28,10 @@ class Dashboard:
     def _draw(self):
         from .world import World
 
-        if not World.current:
+        if not World.active:
             return
 
-        world: World = World.current
-        world._update_plots()
+        World.current._update_plots()
         print(f"Update {len(self.plots)} plots")
         for plot_id in self.plots:
             if plot_id not in self.frames:

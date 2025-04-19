@@ -23,9 +23,11 @@ docstyle = subprocess.call(
 print("\n\n*** pytest ***\n")
 test = subprocess.call(["python", "-m", "pytest", "--cov=datasim/"])
 
-print("\n\n*** sphinx ***\n")
-os.chdir("docs")
-docs = subprocess.call(["python", "-m", "sphinx", "-M", "html", "source", "build"])
+docs = -100
+if test == 0:
+    print("\n\n*** sphinx ***\n")
+    os.chdir("docs")
+    docs = subprocess.call(["python", "-m", "sphinx", "-M", "html", "source", "build"])
 
 print("\n\nSummary\n=======\n")
 
@@ -47,6 +49,8 @@ else:
     print("❌  pytest      Failed")
 if docs == 0:
     print("✔️   sphinx      Success")
+elif docs == -100:
+    print("..  sphinx      Skipped")
 else:
     print("❌  sphinx      Failed")
 
