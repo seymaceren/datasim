@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Any, Final, Optional, Self
+from typing import Final, Optional, Self
 
 import numpy as np
 
@@ -40,6 +40,8 @@ class Entity(ABC):
             self.state = initial_state
         elif isinstance(initial_state, type):
             self.state = initial_state(initial_state.__name__)
+        else:
+            self.state = None
 
         if self.state:
             self.state.switch_to = self.state
@@ -66,22 +68,26 @@ class Entity(ABC):
         if self.state:
             self.state.switch_to = new_state
         else:
-            self.state = new_state
+            self._set_state(new_state)
 
-        if self.state:
-            self.state.entity = self
+    def resource_done(self, resource):
+        """Override to run when this entity's UsingResourceState is done."""
+        pass
 
     def _tick(self):
         if self.state:
             self.state.tick()
             if self.state.switch_to != self.state:
-                print(
-                    f"{self}: {self.state.__class__.__name__} >> {self.state.switch_to.__class__.__name__}"
-                )
-                self.state = self.state.switch_to
-                if self.state:
-                    self.state.entity = self
-                    self.state.switch_to = self.state
+                self._set_state(self.state.switch_to)
+
+    def _set_state(self, new_state):
+        print(
+            f"{self}: {self.state.__class__.__name__} >> {new_state.__class__.__name__}"
+        )
+        self.state = new_state
+        if self.state:
+            self.state.entity = self
+            self.state.switch_to = self.state
 
     def __repr__(self):
         """Get a string representation of the entity."""
@@ -94,7 +100,7 @@ class State(ABC):
     This should be the only place that entities execute behavior code.
     """
 
-    entity: Any = None
+    entity: Entity
     name: str
     switch_to: Self | None
 

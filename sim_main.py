@@ -16,11 +16,11 @@ if "streamlit" in sys.argv:
             st.session_state.world = MainWorldClass()
 
     if type(st.session_state.world) is MainWorldClass:
-        st.session_state.world.simulate(end_tick=7000, stop_server=False)
+        st.session_state.world.simulate(stop_server=False)
 
     from datasim.streamlit_update import draw_dashboard
 
     draw_dashboard()
 
 else:
-    MainWorldClass(headless=True).simulate(end_tick=7000)
+    MainWorldClass(headless=True).simulate()

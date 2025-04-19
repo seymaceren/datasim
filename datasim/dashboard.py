@@ -37,6 +37,7 @@ class Dashboard:
             if plot_id not in self.frames:
                 self.frames[plot_id] = st.empty()
             print(f"Update plot {plot_id}")
+            # TODO put multiple traces in one chart
             self.frames[plot_id].plotly_chart(self.plots[plot_id])
 
     # def plot_test(self):

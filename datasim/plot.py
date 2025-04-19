@@ -104,7 +104,6 @@ class PlotData(ABC):
                     Figure,
                     px.line(
                         self._data_frame,
-                        markers=True,
                         title=self.title,
                         x=self.legend_x,
                         y=self.legend_y,
@@ -252,11 +251,13 @@ class ResourcePlotData(PlotData):
     """Data source from watching the amount of a :class:`Resource`."""
 
     source: Resource
+    plot_users: bool
     frequency: int
 
     def __init__(
         self,
         source_id: str,
+        plot_users: bool = False,
         frequency: int = 1,
         plot_type: PlotType = PlotType.line,
         title: Optional[str] = None,
@@ -276,6 +277,7 @@ class ResourcePlotData(PlotData):
 
         super().__init__(plot_type, title, legend_x, legend_y)
         self.source = World.current.resource(source_id)
+        self.plot_users = plot_users
         self.frequency = frequency
 
     def _tick(self):
@@ -283,7 +285,9 @@ class ResourcePlotData(PlotData):
 
         if World.ticks % self.frequency == 0:
             self._x_buffer[self._buffer_index] = World.seconds()
-            self._y_buffer[self._buffer_index] = self.source.amount
+            self._y_buffer[self._buffer_index] = (
+                len(self.source.users) if self.plot_users else self.source.amount
+            )
             self._buffer_index += 1
 
 

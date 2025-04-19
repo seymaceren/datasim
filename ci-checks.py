@@ -21,7 +21,9 @@ docstyle = subprocess.call(
 )
 
 print("\n\n*** pytest ***\n")
-test = subprocess.call(["python", "-m", "pytest", "--cov=datasim/"])
+test = subprocess.call(
+    ["python", "-m", "pytest", "--cov-config=.coveragerc", "--cov=datasim/"]
+)
 
 docs = -100
 if test == 0:

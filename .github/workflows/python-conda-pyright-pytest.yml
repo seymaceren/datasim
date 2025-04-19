@@ -37,6 +37,6 @@ jobs:
         emoji: false
         verbose: false
         job-summary: true
-        custom-arguments: '--cov=datasim/'
+        custom-arguments: '--cov-config=.coveragerc --cov=datasim/'
     - name: Coveralls
       uses: coverallsapp/github-action@v2

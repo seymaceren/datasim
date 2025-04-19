@@ -1,0 +1,2 @@
+[run]
+omit = datasim/streamlit_update.py

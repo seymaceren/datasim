@@ -48,8 +48,8 @@ class Resource:
     users: List[Entity]
     user_index: Dict[Entity, int]
     slots: int
-    usage_time: int
-    simple_time_left: List[int]
+    usage_time: float
+    simple_time_left: List[float]
     queue: Optional[Queue[Entity]]
     capacity: Number
     amount: Number
@@ -60,7 +60,7 @@ class Resource:
         id: str,
         resource_type: str,
         slots: int = 1,
-        usage_time: int = 1,
+        usage_time: float = 1.0,
         max_queue: int = 0,
         capacity: Number = None,
         start_amount: Number = None,
@@ -95,7 +95,10 @@ class Resource:
         return len(self.users) >= self.slots
 
     def try_use(
-        self, user: Entity | Tuple[Entity, Number], amount: Number = None
+        self,
+        user: Entity | Tuple[Entity, Number],
+        amount: Number = None,
+        usage_time: float = -1.0,
     ) -> UseResult:
         """Try to use the resource.
 
@@ -132,7 +135,9 @@ class Resource:
         elif not self.occupied:
             self.users.append(user)
             self.user_index[user] = len(self.users) - 1
-            self.simple_time_left.append(self.usage_time)
+            self.simple_time_left.append(
+                self.usage_time if usage_time == -1.0 else usage_time
+            )
 
             user.set_state(UsingResourceState(self))
             return UseResult.success
@@ -142,14 +147,31 @@ class Resource:
 
             return UseResult.depleted
 
+    def remove_user(self, user: Entity) -> bool:
+        """Try to remove a resource user.
+
+        Returns:
+            True if the user was successfully removed.
+        """
+        if user not in self.user_index:
+            return False
+        index = self.user_index[user]
+        del self.users[index]
+        del self.simple_time_left[index]
+        del self.user_index[user]
+        for other in range(index, len(self.users)):
+            self.user_index[self.users[other]] = other
+        return True
+
     def usage_tick(self, user: Entity) -> bool:
         """Override this function for more complex usage time than a flat number of seconds."""
+        from .world import World
+
         index = self.user_index[user]
         left = self.simple_time_left[index]
-        left -= 1
+        left -= World.tick_time
         if left <= 0:
-            del self.users[index]
-            del self.simple_time_left[index]
+            self.remove_user(user)
             return False
 
         self.simple_time_left[index] = left
@@ -305,7 +327,8 @@ class UsingResourceState(State):
 
     def tick(self):
         """Use the resource for one tick."""
-        if self.entity is None:
+        if not hasattr(self, "entity"):
             raise ValueError("UsingResourceState has no entity set!")
         if not self.resource.usage_tick(self.entity):
             self.switch_to = None
+            self.entity.resource_done(self.resource)

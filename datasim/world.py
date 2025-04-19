@@ -63,7 +63,6 @@ class World(ABC):
         self.dashboard: Optional[Dashboard] = None
         self.ended: bool = False
         World.tps = tps
-        print(f"tps: {World.tps}")
 
         stdout.reconfigure(encoding="utf-8")  # type: ignore
         print(codecs.open("header", "r", "utf-8").read())  # Draw terminal logo
@@ -185,11 +184,10 @@ class World(ABC):
 
     def _simulation_thread(self):
         print(
-            f"\n{"#"*(36+len(self.title))}\n"
-            + f"###  {self.title}  ###  Starting simulation  ###\n"
-            + f"{"#"*(36+len(self.title))}\n"
+            f"\n▟{"▀"*(4+len(self.title))}▜▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▙\n"
+            + f"█  {self.title}  ▐  Starting simulation  █\n"
+            + f"▜{"▄"*(4+len(self.title))}▟▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▛\n"
         )
-
         if self.end_tick > 0:
             print(
                 f"{self.title}: Run for {self.end_tick / World.tps} seconds"
@@ -198,7 +196,7 @@ class World(ABC):
 
         self.last_update = 0
 
-        while World.ticks < self.end_tick and not self.stopped:
+        while (self.end_tick == 0 or World.ticks < self.end_tick) and not self.stopped:
             self.pre_entities_tick()
             for entity in self.entities:
                 entity._tick()
@@ -212,15 +210,16 @@ class World(ABC):
 
         self.ended = True
         print(
-            f"\n{"#"*(34+len(self.title))}\n"
-            + f"###  {self.title}  ###  End of simulation  ###\n"
-            + f"{"#"*(34+len(self.title))}\n"
+            f"\n▟{"▀"*(4+len(self.title))}▜▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▙\n"
+            + f"█  {self.title}  ▐  End of simulation  █\n"
+            + f"▜{"▄"*(4+len(self.title))}▟▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▛\n"
         )
 
         self.update_time = 0.0
 
+        # TODO fix threading
         if self.stop_server:
-            sleep(3)
+            sleep(10)
             pid = getpid()
             p = Process(pid)
             p.terminate()
