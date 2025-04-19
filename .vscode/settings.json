@@ -1,11 +1,11 @@
 {
-  "flake8.args": [
-    "--max-line-length=120"
-  ],
-  "python.testing.unittestEnabled": false,
-  "python.testing.pytestEnabled": true,
-  "python.testing.pytestArgs": [
-    "--cov=datasim/",
-    "tests/",
-  ]
+    "flake8.args": [
+        "--max-line-length=120"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "python.testing.pytestArgs": [
+        "--cov=datasim/",
+        "tests/",
+    ]
 }

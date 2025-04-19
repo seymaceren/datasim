@@ -69,7 +69,7 @@ class Entity(ABC):
     def _tick(self):
         if self.state:
             self.state.tick()
-            if self.state.switch_to:
+            if self.state.switch_to != self.state:
                 self.state = self.state.switch_to
 
     def __repr__(self):

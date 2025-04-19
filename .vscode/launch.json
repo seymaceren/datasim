@@ -1,43 +1,24 @@
 {
-  // Use IntelliSense to learn about possible attributes.
-  // Hover to view descriptions of existing attributes.
-  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
-  "version": "0.2.0",
-  "configurations": [
-    {
-      "name": "Python Debugger: main.py",
-      "type": "debugpy",
-      "request": "launch",
-      "program": "main.py",
-      "cwd": "${workspaceFolder}",
-      "console": "integratedTerminal"
-    },
-    {
-      "name": "Python: Build docs local",
-      "type": "debugpy",
-      "request": "launch",
-      "module": "sphinx",
-      "args": [
-        "-M",
-        "html",
-        "source",
-        "build"
-      ],
-      "cwd": "${workspaceFolder}/docs",
-      "console": "integratedTerminal"
-    },
-    {
-      "name": "Python: Run pydocstyle",
-      "type": "debugpy",
-      "request": "launch",
-      "module": "pydocstyle",
-      "args": [
-        "--add-ignore=D100",
-        "--add-select=D212",
-        "datasim"
-      ],
-      "cwd": "${workspaceFolder}",
-      "console": "integratedTerminal"
-    }
-  ]
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python Debugger: main.py",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "main.py",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Python: Run CI tests",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "ci-checks.py",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal"
+        }
+    ]
 }

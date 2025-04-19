@@ -13,6 +13,18 @@ class UseResult(Enum):
     queued = "queued"
     in_use = "in_use"
 
+    def __str__(self) -> str:
+        """Get a string representation of the result."""
+        match self:
+            case UseResult.success:
+                return "Success"
+            case UseResult.depleted:
+                return "Failed: Resource depleted"
+            case UseResult.queued:
+                return "Queued"
+            case UseResult.in_use:
+                return "Failed: Resource in use"
+
 
 class Resource(Generic[Number]):
     """Representation of a resource in the simulation.
@@ -78,6 +90,7 @@ class Resource(Generic[Number]):
 
     @property
     def occupied(self) -> bool:
+        """Check if the resource is fully occupied."""
         return len(self.users) >= self.slots
 
     def try_use(self, user: Any, amount: Number = None) -> UseResult:
@@ -122,7 +135,7 @@ class Resource(Generic[Number]):
 
             return UseResult.depleted
 
-    def usage_tick(self, user: Any):
+    def usage_tick(self, user: Any) -> bool:
         """Override this function for more complex usage time than a flat number of seconds."""
         index = self.user_index[user]
         left = self.simple_time_left[index]
@@ -130,8 +143,10 @@ class Resource(Generic[Number]):
         if left <= 0:
             del self.users[index]
             del self.simple_time_left[index]
-        else:
-            self.simple_time_left[index] = left
+            return False
+
+        self.simple_time_left[index] = left
+        return True
 
     # region Utility functions
 

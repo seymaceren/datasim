@@ -54,13 +54,13 @@ class ICU(World):
 
     def pre_entities_tick(self):
         while len(self.patients) > 0 and self.patients[0][0] <= World.seconds():
+            print(
+                f"Patient joining queue of {len(self.patients_waiting)} at {self.patients[0][0]}"
+            )
             self.patients_waiting.enqueue(self.patients[0][1])
             self.patients.pop(0)
 
         while not self.beds.occupied and not self.patients_waiting == 0:
             next = self.patients_waiting.peek()
-            self.beds.try_use(next)
-
-    # def post_entities_tick(self):
-    # if not self.headless:
-    # self.overview.append(World.seconds(), World.seconds() * 5.0)
+            result = self.beds.try_use(next)
+            print(f"Patient using bed at {World.seconds()}: {result}")

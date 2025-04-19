@@ -1,10 +1,10 @@
 from abc import ABC
 from enum import Enum
 from typing import Any, Generic, List, Optional, cast
-from numpy import ndarray
 from pandas import DataFrame
 from plotly.graph_objs._figure import Figure
 
+import numpy as np
 import plotly.express as px
 import streamlit as st
 
@@ -23,6 +23,18 @@ class PlotType(Enum):
     pie = "pie"
     scatter = "scatter"
 
+    def __str__(self) -> str:
+        """Get a string representation of the plot type."""
+        match self:
+            case PlotType.bar:
+                return "Bar chart"
+            case PlotType.line:
+                return "Line graph"
+            case PlotType.pie:
+                return "Pie chart"
+            case PlotType.scatter:
+                return "Scatter plot"
+
 
 class PlotData(ABC):
     """Abstract superclass of different types of data to plot."""
@@ -32,7 +44,6 @@ class PlotData(ABC):
     trace: Optional[Figure] = None
     dashboard: Optional[Dashboard] = None
     plot: Optional[Any] = None
-    data_frame: DataFrame
     legend_x: str
     legend_y: str
 
@@ -46,13 +57,29 @@ class PlotData(ABC):
         """Create a data source to plot from.
 
         Args:
-            plot_type ("scatter", "line", "bar", "pie"): Type or chart to plot.
+            plot_type ("scatter", "line", "bar", "pie"): Type of plot to render.
             title (str, optional): Title to use over the plot. Defaults to None.
         """
+        from .world import World
+
         self.plot_type = plot_type
         self.title = title
         self.legend_x = legend_x
         self.legend_y = legend_y
+
+        self._buffer_size = max(10000, World.end_tick)
+        self._buffer_index = 0
+        self._x_buffer = np.zeros(self._buffer_size)
+        self._y_buffer = np.zeros(self._buffer_size)
+
+    @property
+    def _data_frame(self):
+        return DataFrame(
+            {
+                self.legend_x: self._x_buffer[: self._buffer_index],
+                self.legend_y: self._y_buffer[: self._buffer_index],
+            }
+        )
 
     def _update_traces(self):
         if self.dashboard is None:
@@ -63,34 +90,34 @@ class PlotData(ABC):
             return
 
         match self.plot_type:
-            case "bar":
+            case PlotType.bar:
                 self.trace = cast(
                     Figure,
                     px.bar(
-                        self.data_frame,
+                        self._data_frame,
                         title=self.title,
                         x=self.legend_x,
                         y=self.legend_y,
                     ),
                 )
-            case "line":
+            case PlotType.line:
                 self.trace = cast(
                     Figure,
                     px.line(
-                        self.data_frame,
+                        self._data_frame,
                         markers=True,
                         title=self.title,
                         x=self.legend_x,
                         y=self.legend_y,
                     ),
                 )
-            case "pie":
+            case PlotType.pie:
                 pass
-            case "scatter":
+            case PlotType.scatter:
                 self.trace = cast(
                     Figure,
                     px.scatter(
-                        self.data_frame,
+                        self._data_frame,
                         x=self.legend_x,
                         y=self.legend_y,
                         title=self.title,
@@ -129,7 +156,8 @@ class XYPlotData(PlotData):
             title (Optional[str], optional): Title to use over the plot. Defaults to None.
         """
         super().__init__(plot_type, title, legend_x, legend_y)
-        self.data_frame = DataFrame(zip(data_x, data_y), columns=[legend_x, legend_y])
+        self._x_buffer[: len(data_x)] = data_x
+        self._y_buffer[: len(data_y)] = data_y
 
     def append(self, x: float, y: float):
         """Add a data point to this data set.
@@ -138,7 +166,9 @@ class XYPlotData(PlotData):
             x (float): x value of the data point.
             y (float): y value of the data point.
         """
-        self.data_frame.loc[len(self.data_frame)] = [x, y]
+        self._x_buffer[self._buffer_index] = x
+        self._y_buffer[self._buffer_index] = y
+        self._buffer_index += 1
 
 
 class CategoryPlotData(PlotData):
@@ -175,18 +205,19 @@ class CategoryPlotData(PlotData):
             label (str): label of the data point.
             value (float): value of the data point.
         """
-        self.labels.append(label)
-        self.values.append(value)
+        # self.labels.append(label)
+        # self.values.append(value)
+        # TODO
 
 
 class NPPlotData(PlotData):
     """Data with Numpy array as source."""
 
-    data: ndarray
+    data: np.ndarray
 
     def __init__(
         self,
-        data: ndarray,
+        data: np.ndarray,
         plot_type: PlotType = PlotType.line,
         title: Optional[str] = None,
         legend_x: str = "x",
@@ -195,12 +226,27 @@ class NPPlotData(PlotData):
         """Create a data source from a Numpy array.
 
         Args:
-            data (ndarray): Array of data points. Shape should correspond to the dimensions of the plot.
-            plot_type ("scatter", "line", "bar", "pie", optional): Type of plot to show. Defaults to "line".
-            title (Optional[str], optional): Title to use over the plot. Defaults to None.
+            data (:class:`np.ndarray`): Array of data points. Shape should correspond to the dimensions of the plot
+                (2 columns for 2D plots, 3 columns for 3D plots).
+            plot_type (:class:`PlotType`, optional): Type of plot to show. Defaults to `"line"`.
+            title (`str`, optional): Title to use over the plot. Defaults to `None`.
+
+        Raises:
+            `TypeError`: When trying to take from a capacity resource without specifying an amount.
         """
         super().__init__(plot_type, title, legend_x, legend_y)
+        if data.shape[1] != 2:  # TODO add 3 when adding 3D plots
+            raise ValueError("")
         self.data = data
+
+    @property
+    def _data_frame(self):
+        return DataFrame(
+            {
+                self.legend_x: self.data[0],
+                self.legend_y: self.data[1],
+            }
+        )
 
 
 class ResourcePlotData(Generic[Number], PlotData):
@@ -230,16 +276,14 @@ class ResourcePlotData(Generic[Number], PlotData):
         super().__init__(plot_type, title, legend_x, legend_y)
         self.source = source
         self.frequency = frequency
-        self.data_frame = DataFrame(columns=[legend_x, legend_y])
 
     def _tick(self):
         from .world import World
 
         if World.ticks % self.frequency == 0:
-            self.data_frame.loc[len(self.data_frame)] = [
-                World.seconds(),
-                self.source.amount,
-            ]
+            self._x_buffer[self._buffer_index] = World.seconds()
+            self._y_buffer[self._buffer_index] = self.source.amount
+            self._buffer_index += 1
 
 
 class QueuePlotData(PlotData):
@@ -269,16 +313,14 @@ class QueuePlotData(PlotData):
         super().__init__(plot_type, title, legend_x, legend_y)
         self.source = source
         self.frequency = frequency
-        self.data_frame = DataFrame(columns=[legend_x, legend_y])
 
     def _tick(self):
         from .world import World
 
         if World.ticks % self.frequency == 0:
-            self.data_frame.loc[len(self.data_frame)] = [
-                World.seconds(),
-                len(self.source),
-            ]
+            self._x_buffer[self._buffer_index] = World.seconds()
+            self._y_buffer[self._buffer_index] = len(self.source)
+            self._buffer_index += 1
 
 
 class StatePlotData(PlotData):
@@ -306,6 +348,8 @@ class StatePlotData(PlotData):
         super().__init__(plot_type, title)
         self.data = data
         self.frequency = frequency
+
+        # TODO
 
 
 class Plot:

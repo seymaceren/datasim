@@ -33,9 +33,11 @@ class Dashboard:
 
         world: World = World.current
         world._update_plots()
+        print(f"Update {len(self.plots)} plots")
         for plot_id in self.plots:
             if plot_id not in self.frames:
                 self.frames[plot_id] = st.empty()
+            print(f"Update plot {plot_id}")
             self.frames[plot_id].plotly_chart(self.plots[plot_id])
 
     # def plot_test(self):

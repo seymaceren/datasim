@@ -48,4 +48,5 @@ class UsingResourceState(Generic[Number], State):
         """Use the resource for one tick."""
         if self.entity is None:
             return
-        self.resource.usage_tick(self.entity)
+        if not self.resource.usage_tick(self.entity):
+            self.switch_to = None

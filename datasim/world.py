@@ -18,6 +18,7 @@ class World(ABC):
     """
 
     ticks: int = 0
+    end_tick: int = 0
     tps: float = 10.0
     update_time: float | None = 1.0
 
@@ -78,8 +79,8 @@ class World(ABC):
 
     def add_plot(self, plot: Plot):
         """Add a plot to the dashboard."""
-        if self.dashboard:
-            self.plots[plot.id] = plot
+        # if self.dashboard:
+        self.plots[plot.id] = plot
 
     def add(self, entity: Entity):
         """Add an entity to this :class:`World`.
@@ -135,6 +136,7 @@ class World(ABC):
         self.stop_server = stop_server
         self.sim_thread = Thread(target=self._simulation_thread)
         self.sim_thread.start()
+        self.sim_thread.join()
         return True
 
     def stop(self):
@@ -195,7 +197,7 @@ class World(ABC):
             + f"{"#"*(34+len(self.title))}\n"
         )
 
-        World.update_time = 0.0
+        self.update_time = 0.0
 
         if self.stop_server:
             sleep(3)
