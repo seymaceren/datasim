@@ -1,7 +1,7 @@
 import sys
 import streamlit as st
 
-from datasim import World
+from datasim import simulation
 
 # Use this line to specify your main world class
 from examples.icu.icu import ICU as MainWorldClass
@@ -9,8 +9,8 @@ from examples.icu.icu import ICU as MainWorldClass
 
 if "streamlit" in sys.argv:
     if "world" not in st.session_state:
-        if World.active:
-            st.session_state.world = World.current
+        if simulation.active:
+            st.session_state.world = simulation.world()
         else:
             profiling = True
             st.session_state.world = MainWorldClass()

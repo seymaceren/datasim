@@ -12,6 +12,7 @@ from .dashboard import Dashboard
 from .entity import Entity
 from .queue import Queue
 from .resource import Resource
+import datasim.simulation as simulation
 
 
 class PlotType(Enum):
@@ -59,14 +60,12 @@ class PlotData(ABC):
             plot_type ("scatter", "line", "bar", "pie"): Type of plot to render.
             title (str, optional): Title to use over the plot. Defaults to None.
         """
-        from .world import World
-
         self.plot_type = plot_type
         self.title = title
         self.legend_x = legend_x
         self.legend_y = legend_y
 
-        self._buffer_size = max(10000, World.end_tick)
+        self._buffer_size = max(20000, simulation.end_tick)
         self._buffer_index = 0
         self._x_buffer = np.zeros(self._buffer_size)
         self._y_buffer = np.zeros(self._buffer_size)
@@ -273,18 +272,16 @@ class ResourcePlotData(PlotData):
             plot_type ("scatter", "line", "bar", "pie", optional): Type of plot to show. Defaults to "line".
             title (Optional[str], optional): Title to use over the plot. Defaults to None.
         """
-        from .world import World
-
         super().__init__(plot_type, title, legend_x, legend_y)
-        self.source = World.current.resource(source_id)
+        self.source = simulation.world().resource(source_id)
         self.plot_users = plot_users
         self.frequency = frequency
 
     def _tick(self):
-        from .world import World
-
-        if World.ticks % self.frequency == 0:
-            self._x_buffer[self._buffer_index] = World.seconds()
+        if (self.frequency == 0 and self.source.changed_tick == simulation.ticks) or (
+            simulation.ticks % self.frequency == 0
+        ):
+            self._x_buffer[self._buffer_index] = simulation.time
             self._y_buffer[self._buffer_index] = (
                 len(self.source.users) if self.plot_users else self.source.amount
             )
@@ -315,17 +312,15 @@ class QueuePlotData(PlotData):
             plot_type ("scatter", "line", "bar", "pie", optional): Type of plot to show. Defaults to "line".
             title (Optional[str], optional): Title to use over the plot. Defaults to None.
         """
-        from .world import World
-
         super().__init__(plot_type, title, legend_x, legend_y)
-        self.source = World.current.queue(source_id)
+        self.source = simulation.world().queue(source_id)
         self.frequency = frequency
 
     def _tick(self):
-        from .world import World
-
-        if World.ticks % self.frequency == 0:
-            self._x_buffer[self._buffer_index] = World.seconds()
+        if (self.frequency == 0 and self.source.changed_tick == simulation.ticks) or (
+            simulation.ticks % self.frequency == 0
+        ):
+            self._x_buffer[self._buffer_index] = simulation.time
             self._y_buffer[self._buffer_index] = len(self.source)
             self._buffer_index += 1
 

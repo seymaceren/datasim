@@ -10,8 +10,10 @@ from typing import Dict, Final, Optional, Self
 
 from .entity import Entity
 from .plot import Plot
+from .quantity import Quantity
 from .queue import Queue
 from .resource import Resource
+import datasim.simulation as simulation
 
 
 class World(ABC):
@@ -20,19 +22,16 @@ class World(ABC):
     A simulation should run in a subclass of World.
     """
 
-    ticks: int = 0
-    end_tick: int = 0
-    tps: float = 10.0
     update_time: float | None = 1.0
 
     headless: bool
-    active: bool = False
     current: Self
     title: Final[str]
     entities: Final[OrderedSet[Entity]]
     plots: Final[Dict[str, Plot]]
     resources: Final[Dict[str, Resource]]
     queues: Final[Dict[str, Queue]]
+    quantities: Final[Dict[str, Quantity]]
     stopped: bool = False
 
     def __init__(
@@ -48,21 +47,22 @@ class World(ABC):
             tps (float, optional): Ticks per second (only in simulation time,
                 unless running :meth:`simulate()` with `realtime=True`). Defaults to 10.0.
         """
-        if World.active:
+        if simulation.active:
             print("(Warning: Not launching another instance)")
             return
         World.current = self
-        World.active = True
+        simulation.active = True
         self.title = title
         self.entities = OrderedSet[Entity]([])
         self.plots = {}
         self.resources = {}
         self.queues = {}
+        self.quantities = {}
         from datasim import Dashboard
 
         self.dashboard: Optional[Dashboard] = None
         self.ended: bool = False
-        World.tps = tps
+        simulation.tps = tps
 
         stdout.reconfigure(encoding="utf-8")  # type: ignore
         print(codecs.open("header", "r", "utf-8").read())  # Draw terminal logo
@@ -74,14 +74,9 @@ class World(ABC):
     @staticmethod
     def reset():
         """Reset the World so you can start a different simulation."""
-        World.active = False
+        simulation.active = False
 
-    @staticmethod
-    def seconds() -> float:
-        """Get the number of seconds elapsed in the simulation world."""
-        return World.ticks / World.tps
-
-    def add(self, obj: Entity | Resource | Queue):
+    def add(self, obj: Entity | Resource | Queue | Quantity):
         """Add an entity to this :class:`World`.
 
         Args:
@@ -93,8 +88,10 @@ class World(ABC):
             self.resources[obj.id] = obj
         elif isinstance(obj, Queue):
             self.queues[obj.id] = obj
+        elif isinstance(obj, Quantity):
+            self.quantities[obj.id] = obj
 
-    def remove(self, obj: Entity | Resource | Queue) -> bool:
+    def remove(self, obj: Entity | Resource | Queue | Quantity) -> bool:
         """Remove an entity from this :class:`World`.
 
         Args:
@@ -110,6 +107,8 @@ class World(ABC):
                 self.resources.pop(obj.id)
             elif isinstance(obj, Queue):
                 self.queues.pop(obj.id)
+            elif isinstance(obj, Quantity):
+                self.quantities.pop(obj.id)
         except ValueError:
             return False
         return True
@@ -128,6 +127,13 @@ class World(ABC):
             return queue
         raise KeyError(f"No queue with id '{key}' found!")
 
+    def quantity(self, key: str) -> Quantity:
+        """Get a Quantity by id."""
+        quantity = self.quantities.get(key, None)
+        if quantity is not None:
+            return quantity
+        raise KeyError(f"No queue with id '{key}' found!")
+
     def simulate(
         self,
         tps: float = 0.0,
@@ -140,7 +146,7 @@ class World(ABC):
 
         Args:
             tps (float, optional): Ticks per second (only in simulation time, unless `realtime=True`).
-                Defaults to :data:`World.tps`.
+                Defaults to :data:`simulation.tps`.
             end_tick (int, optional): Tick count to end, unless set to 0. Defaults to 0.
             restart (bool, optional): Set to `True` if this is a restart. Defaults to False.
             realtime (bool, optional): Run the simulation in real seconds. Defaults to False.
@@ -151,10 +157,11 @@ class World(ABC):
             return False
 
         if tps > 0.0:
-            World.tps = tps
-        World.ticks = 0
-        World.tick_time = 1.0 / World.tps
-        self.end_tick = end_tick
+            simulation.tps = tps
+        simulation.ticks = 0
+        simulation.time = 0.0
+        simulation.tick_time = 1.0 / simulation.tps
+        simulation.end_tick = end_tick
         self.realtime = realtime
         self.stop_server = stop_server
         self.sim_thread = Thread(target=self._simulation_thread)
@@ -188,15 +195,17 @@ class World(ABC):
             + f"█  {self.title}  ▐  Starting simulation  █\n"
             + f"▜{"▄"*(4+len(self.title))}▟▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▛\n"
         )
-        if self.end_tick > 0:
+        if simulation.end_tick > 0:
             print(
-                f"{self.title}: Run for {self.end_tick / World.tps} seconds"
-                + f" ({self.end_tick} ticks at {World.tps} ticks/second)..."
+                f"{self.title}: Run for {simulation.end_tick / simulation.tps} seconds"
+                + f" ({simulation.end_tick} ticks at {simulation.tps} ticks/second)..."
             )
 
         self.last_update = 0
 
-        while (self.end_tick == 0 or World.ticks < self.end_tick) and not self.stopped:
+        while (
+            simulation.end_tick == 0 or simulation.ticks < simulation.end_tick
+        ) and not self.stopped:
             self.pre_entities_tick()
             for entity in self.entities:
                 entity._tick()
@@ -204,9 +213,10 @@ class World(ABC):
             if self.dashboard:
                 for plot in self.plots.values():
                     plot._tick()
-            World.ticks += 1
+            simulation.ticks += 1
+            simulation.time = simulation.ticks / simulation.tps
             if self.realtime:
-                sleep(World.tick_time)
+                sleep(simulation.tick_time)
 
         self.ended = True
         print(

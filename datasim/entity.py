@@ -3,6 +3,8 @@ from typing import Final, Optional, Self
 
 import numpy as np
 
+import simulation
+
 
 class Entity(ABC):
     """An entity in the simulation world.
@@ -13,7 +15,8 @@ class Entity(ABC):
     registry: Final[dict[type, int]] = {}
     id: Final[int]
     name: Final[str]
-    state: Optional["State"]
+    _state: "State | None"
+    ticks_in_current_state: int
     location: Optional[np.typing.NDArray[np.float64]]
 
     def __init__(
@@ -25,7 +28,7 @@ class Entity(ABC):
 
         Args:
             name (Optional[str], optional): Descriptive name of the entity. Defaults to None.
-            initial_state (Optional[State], optional): Initial state of the entity. If using a type,
+            initial_state (Optional[State or type], optional): Initial state of the entity. If using a type,
                 that type needs to have a constructor with only name as paramater. Defaults to None,
                 meaning no behavior will be executed.
         """
@@ -47,7 +50,11 @@ class Entity(ABC):
             self.state.switch_to = self.state
             self.state.entity = self
 
-    def set_state(self, new_state: "State | type"):
+        self.ticks_in_current_state = 0
+
+        simulation.world().add(self)
+
+    def _set_state(self, new_state: "State | type"):
         """Change the state of the entity.
 
         The new behavior will be executed starting at the next tick.
@@ -65,29 +72,41 @@ class Entity(ABC):
         if not isinstance(new_state, State):
             raise TypeError("Given type is not a subclass of State")
 
-        if self.state:
-            self.state.switch_to = new_state
+        if self._state:
+            self._state.switch_to = new_state
         else:
-            self._set_state(new_state)
+            self._change_state(new_state)
+
+    def _get_state(self) -> "State | None":
+        return self._state
+
+    state = property(
+        _get_state, _set_state, None, """The current state of the entity."""
+    )
 
     def resource_done(self, resource):
         """Override to run when this entity's UsingResourceState is done."""
         pass
 
     def _tick(self):
-        if self.state:
-            self.state.tick()
-            if self.state.switch_to != self.state:
-                self._set_state(self.state.switch_to)
+        if self._state:
+            self._state.tick()
+            if self._state.switch_to != self._state:
+                self._change_state(self._state.switch_to)
 
-    def _set_state(self, new_state):
+    def _change_state(self, new_state):
+        if self._state == new_state:
+            return
+
         print(
-            f"{self}: {self.state.__class__.__name__} >> {new_state.__class__.__name__}"
+            f"{self}: {self._state.__class__.__name__} >> {new_state.__class__.__name__}"
         )
-        self.state = new_state
-        if self.state:
-            self.state.entity = self
-            self.state.switch_to = self.state
+        self._state = new_state
+        if self._state:
+            self._state.entity = self
+            self._state.switch_to = self._state
+
+        self.ticks_in_current_state = 0
 
     def __repr__(self):
         """Get a string representation of the entity."""

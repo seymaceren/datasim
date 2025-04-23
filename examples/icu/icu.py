@@ -1,28 +1,26 @@
 import csv
 from colors import color
-from typing import List, Self, Tuple
+from typing import List, Self
 
 from datasim import (
-    Plot,
-    PlotType,
+    Quantity,
     Queue,
-    QueuePlotData,
     Resource,
-    ResourcePlotData,
+    simulation,
     UseResult,
     World,
     XYPlotData,
 )
-from .patient import Patient, WaitingPatientState
+from .patient import PatientData, Patient, WaitingPatientState
 
 
 class ICU(World):
     overview: XYPlotData
-    patients: List[Tuple[float, Patient]]
+    patients: List[PatientData]
     beds: Resource
     patients_waiting: Queue[Patient]
-    patients_treated: int = 0
-    patients_died: int = 0
+    patients_treated: Quantity
+    patients_died: Quantity
     icu: Self
 
     def __init__(self, headless: bool = False):
@@ -30,80 +28,57 @@ class ICU(World):
 
         ICU.icu = self
 
-        self.beds = Resource(self, "beds", "beds", 15)
-        self.add(self.beds)
+        self.load_patient_data("examples/icu/simulatiedata.csv")
 
-        self.add_plot(
-            Plot(
-                "beds",
-                ResourcePlotData(
-                    "beds", True, 1, PlotType.line, "Beds in use", legend_y="beds"
-                ),
-            )
-        )
-
-        self.patients = []
-        for row in csv.reader(open("examples/icu/simulatiedata.csv")):
-            if not (row[0]).isnumeric():
-                continue
-            patient = Patient(row[0], row[3], float(row[2]))
-            self.patients.append((float(row[1]), patient))
-            self.add(patient)
-
+        self.beds = Resource("beds", "beds", 5, plot_title="Beds in use")
         self.patients_waiting = Queue[Patient]("patients_waiting")
-        self.add(self.patients_waiting)
+        self.patients_treated = Quantity("Patients treated", 0)
+        self.patients_died = Quantity("Patients died", 0)
 
-        self.add_plot(
-            Plot(
-                "waiting",
-                QueuePlotData("patients_waiting", 1, PlotType.line, "Patients waiting"),
-            )
-        )
-
-        self.treated = XYPlotData(
-            [], [], PlotType.line, "Patients treated", "seconds", "patients"
-        )
-        self.died = XYPlotData(
-            [], [], PlotType.line, "Patients died", "seconds", "patients"
-        )
-        self.treated_vs_died = Plot("treated", self.treated)
-        self.died_plot = Plot("died", self.died)
-        self.add_plot(self.treated_vs_died)
-        self.add_plot(self.died_plot)
+    def load_patient_data(self, filename: str):
+        self.patients = []
+        for row in csv.reader(open(filename)):
+            patient = PatientData()
+            patient.__dict__ = {
+                "id": row[0],
+                "enter_time": float(row[1]),
+                "treatment_time": float(row[2]),
+                "condition": row[3],
+            }
+            self.patients.append(patient)
 
     def remove(self, obj):
         if isinstance(obj, Patient):
             if obj.alive:
                 self.patients_treated += 1
-                self.treated.append(World.seconds(), self.patients_treated)
             else:
                 self.patients_died += 1
-                self.died.append(World.seconds(), self.patients_died)
         return super().remove(obj)
 
     def pre_entities_tick(self):
-        while len(self.patients) > 0 and self.patients[0][0] <= World.seconds():
+        while len(self.patients) > 0 and self.patients[0].enter_time <= simulation.time:
+            patient = self.patients[0]
             print(
                 color(
-                    f"Patient joining queue of {len(self.patients_waiting)} at {self.patients[0][0]}",
+                    f"Patient joining queue of {len(self.patients_waiting)} at {patient.enter_time}",
                     fg=45,
                 )
             )
-            patient = self.patients[0][1]
-            patient.set_state(WaitingPatientState)
+            patient = Patient(patient.id, patient.condition, patient.treatment_time)
+            patient.state = WaitingPatientState
             self.patients_waiting.enqueue(patient)
             self.patients.pop(0)
 
         # We don't want our patients to look for beds themselves but in order of arrival.
-        while not self.beds.occupied and not len(self.patients_waiting) == 0:
-            next = self.patients_waiting.peek()
+        next = self.patients_waiting.peek()
+        while not self.beds.occupied and next is not None:
             if not next.alive:
                 self.patients_waiting.dequeue()
             else:
                 result = self.beds.try_use(next, usage_time=next.treatment_time)
                 print(
                     color(
-                        f"Patient {next.name} trying to use a bed at {World.seconds()}: {result}",
+                        f"Patient {next.name} trying to use a bed at {simulation.time}: {result}",
                         fg="blue",
                     )
                 )

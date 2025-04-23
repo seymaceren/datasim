@@ -1,6 +1,6 @@
 from colors import color
 from typing import Dict, Optional
-from datasim import Entity, State, Resource, World
+from datasim import Entity, State, Resource, simulation
 
 
 class WaitingPatientState(State):
@@ -26,6 +26,13 @@ critical_time_for_condition: Dict[str, Optional[float]] = {
 }
 
 
+class PatientData:
+    id: str
+    enter_time: float
+    treatment_time: float
+    condition: str
+
+
 class Patient(Entity):
     treatment_time: float
     condition: str
@@ -37,25 +44,26 @@ class Patient(Entity):
         super().__init__(name)
         self.condition = condition
         self.treatment_time = treatment_time
+
         self.alive = True
 
         self.critical_time = critical_time_for_condition[condition]
 
     def deteriorate(self):
         if self.critical_time:
-            self.critical_time -= World.tick_time
+            self.critical_time -= simulation.tick_time
             if self.critical_time <= 0.0:
                 self.died()
 
     def resource_done(self, resource: Resource):
         if resource.resource_type == "beds":
             print(color(f"Patient {self.name} is treated!", fg="green"))
-            World.current.remove(self)
+            simulation.world().remove(self)
 
     def died(self):
         self.alive = False
         print(
             color(f"Patient {self.name} died of condition {self.condition}!", fg="red")
         )
-        World.current.remove(self)
+        simulation.world().remove(self)
         pass

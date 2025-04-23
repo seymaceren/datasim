@@ -4,6 +4,8 @@ from plotly.graph_objs._figure import Figure
 import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
 
+import simulation
+
 
 class Dashboard:
     """Dashboard to show the state and results of the simulation.
@@ -13,9 +15,7 @@ class Dashboard:
 
     def __init__(self):
         """Dashboard is created during sim initialization."""
-        from .world import World
-
-        if not World.active:
+        if not simulation.active:
             return
 
         st.session_state.dashboard = self
@@ -26,12 +26,10 @@ class Dashboard:
         self.start_time = monotonic()
 
     def _draw(self):
-        from .world import World
-
-        if not World.active:
+        if not simulation.active:
             return
 
-        World.current._update_plots()
+        simulation.world()._update_plots()
         print(f"Update {len(self.plots)} plots")
         for plot_id in self.plots:
             if plot_id not in self.frames:

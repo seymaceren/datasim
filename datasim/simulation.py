@@ -1,0 +1,22 @@
+"""Global simulation properties."""
+
+"""Number of ticks elapsed in the current simulation."""
+ticks: int = 0
+"""Number of seconds elapsed in the current simulation."""
+time: float = 0.0
+"""The maximum number of ticks the simulation will run, if greater than 0."""
+end_tick: int = 0
+"""Number of ticks per simulated second (or also real seconds if running in realtime mode)."""
+tps: float = 10.0
+"""Number of simulated seconds per tick (or also real seconds if running in realtime mode)."""
+tick_time: float = 0.1
+
+"""Checks if the simulation is active."""
+active: bool = False
+
+
+def world():
+    """Get the current simulation `World`."""
+    from .world import World
+
+    return World.current

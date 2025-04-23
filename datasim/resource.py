@@ -1,9 +1,11 @@
 from enum import Enum
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Dict, List, Literal, Optional, Self, Tuple
 
 from .entity import Entity, State
+from .plot import Plot, PlotType, ResourcePlotData
 from .queue import Queue
 from .types import Number
+import simulation
 
 
 class UseResult(Enum):
@@ -42,7 +44,6 @@ class Resource:
         to identify the kind of resource, and set a single usage_time if more than 1 tick.
     """
 
-    world: Any
     id: str
     resource_type: str
     users: List[Entity]
@@ -52,32 +53,44 @@ class Resource:
     simple_time_left: List[float]
     queue: Optional[Queue[Entity]]
     capacity: Number
-    amount: Number
+    _amount: Number
+    changed_tick: int
 
     def __init__(
         self,
-        world: Any,
         id: str,
         resource_type: str,
         slots: int = 1,
-        usage_time: float = 1.0,
+        usage_time: float = 0.0,
         max_queue: int = 0,
         capacity: Number = None,
         start_amount: Number = None,
+        auto_plot: PlotType | Literal[False] = PlotType.line,
+        plot_frequency: int = 1,
+        plot_title: Optional[str] = None,
     ):
         """Create a resource.
 
         Args:
-            id (str): Descriptive name of the resource.
-            resource_type (str): Identifier of the resource in the pool.
-            slots (int, optional): Number of possible simultaneous users.
-                If set to 0, the resource is a pure counter. Defaults to 1.
-            max_queue (int, optional): Size of optional queue of users who can automatically
-                (without a separate State) wait for the resource when occupied. Defaults to 0.
-            capacity (int, optional): Optional maximum amount stored in the pool. No maximum if set to 0. Defaults to 0.
-            start_amount (int, optional): Starting amount of resources in the pool. Defaults to 0.
+            id (`str`): Descriptive name of the resource.
+            resource_type (`str`): Identifier of the resource in the pool.
+            slots (`int`, optional): Number of possible simultaneous users.
+                If set to `0`, the resource is a pure counter. Defaults to `1`.
+            usage_time: The default amount of time one use of this resource takes.
+                Set to `0.0` if the resource doesn't take time to use; if set to `0.0` and capacity
+                is `None`, the resource only limits its usage on a single concurrent tick.
+                You should probably only use that if your tick duration is very long. Defaults to `0.0`.
+            max_queue (`int`, optional): Size of optional queue of users who can automatically
+                (without a separate State) wait for the resource when occupied. Defaults to `0`.
+            capacity (`int`, optional): Optional maximum amount stored in the pool. No maximum if set to 0.
+                Defaults to `0`.
+            start_amount (`int`, optional): Starting amount of resources in the pool. Defaults to `0`.
+            auto_plot (`PlotType` or `False`, optional): Whether to automatically add a plot to the dashboard
+                for this resource, and which type of plot if so. Defaults to `PlotType.line`.
+            plot_frequency (int, optional): Whether to add a data point every `frequency` ticks.
+                If set to `0`, adds a data point only when the quantity changes. Defaults to `1`.
+            plot_title (Optional[str], optional): An optional plot title. Defaults to `None`.
         """
-        self.world = world
         self.id = id
         self.resource_type = resource_type
         self.users = []
@@ -87,7 +100,42 @@ class Resource:
         self.simple_time_left = []
         self.queue = Queue[Entity](id, max_queue) if max_queue > 0 else None
         self.capacity = capacity
-        self.amount = start_amount
+        self._amount = start_amount
+        self.changed_tick = 0
+
+        simulation.world().add(self)
+
+        if auto_plot:
+            self.make_plot(auto_plot, plot_frequency, plot_title)
+
+    def make_plot(
+        self,
+        auto_plot: PlotType = PlotType.line,
+        frequency: int = 1,
+        plot_title: Optional[str] = None,
+    ):
+        simulation.world().add_plot(
+            Plot(
+                self.id,
+                ResourcePlotData(
+                    self.id,
+                    self.capacity is None,
+                    frequency,
+                    auto_plot,
+                    plot_title,
+                    legend_y=self.resource_type,
+                ),
+            )
+        )
+
+    def _get(self) -> Number:
+        return self._amount
+
+    def _set(self, amount: int | float):
+        self._amount = amount
+        self.changed_tick = simulation.ticks
+
+    amount = property(_get, _set, None, """Current amount of the resource.""")
 
     @property
     def occupied(self) -> bool:
@@ -139,7 +187,7 @@ class Resource:
                 self.usage_time if usage_time == -1.0 else usage_time
             )
 
-            user.set_state(UsingResourceState(self))
+            user.state = UsingResourceState(self)
             return UseResult.success
         else:
             if self.queue and self.queue.enqueue(user, amount):
@@ -165,11 +213,9 @@ class Resource:
 
     def usage_tick(self, user: Entity) -> bool:
         """Override this function for more complex usage time than a flat number of seconds."""
-        from .world import World
-
         index = self.user_index[user]
         left = self.simple_time_left[index]
-        left -= World.tick_time
+        left -= simulation.tick_time
         if left <= 0:
             self.remove_user(user)
             return False
@@ -183,120 +229,131 @@ class Resource:
         """Check if the amount of the resource is equal to a number."""
         if self is other:
             return True
-        if self.amount is None:
+        if self._amount is None:
             return other is None
-        return self.amount == other
+        return self._amount == other
 
     def __lt__(self, other: object):
         """Check if the amount of the resource is less than a number."""
-        if (isinstance(self.amount, int) or isinstance(self.amount, float)) and (
+        if (isinstance(self._amount, int) or isinstance(self._amount, float)) and (
             isinstance(other, int) or isinstance(other, float)
         ):
-            return self.amount < other
+            return self._amount < other
         return False
 
     def __le__(self, other: object):
         """Check if the amount of the resource is less than or equal to a number."""
-        if (isinstance(self.amount, int) or isinstance(self.amount, float)) and (
+        if (isinstance(self._amount, int) or isinstance(self._amount, float)) and (
             isinstance(other, int) or isinstance(other, float)
         ):
-            return self.amount <= other
+            return self._amount <= other
         return False
 
     def __gt__(self, other: object):
         """Check if the amount of the resource is greater than a number."""
-        if (isinstance(self.amount, int) or isinstance(self.amount, float)) and (
+        if (isinstance(self._amount, int) or isinstance(self._amount, float)) and (
             isinstance(other, int) or isinstance(other, float)
         ):
-            return self.amount > other
+            return self._amount > other
         return False
 
     def __ge__(self, other: object):
         """Check if the amount of the resource is greater than or equal to a number."""
         if other is None:
             return False
-        if (isinstance(self.amount, int) or isinstance(self.amount, float)) and (
+        if (isinstance(self._amount, int) or isinstance(self._amount, float)) and (
             isinstance(other, int) or isinstance(other, float)
         ):
-            return self.amount >= other
+            return self._amount >= other
         return False
 
-    def __iadd__(self, other: Number):
+    def __iadd__(self, other: Number) -> Self:
         """Add a number to the amount of the resource."""
         if other is None:
-            return
-        if isinstance(self.amount, int):
+            return self
+        if isinstance(self._amount, int):
             self.amount += int(other)
-        elif isinstance(self.amount, float):
+        elif isinstance(self._amount, float):
             self.amount += other
+        return self
 
-    def __isub__(self, other: Number):
+    def __isub__(self, other: Number) -> Self:
         """Subtract a number from the amount of the resource."""
         if other is None:
-            return
-        if isinstance(self.amount, int):
+            return self
+        if isinstance(self._amount, int):
             self.amount -= int(other)
-        elif isinstance(self.amount, float):
-            self.amount += other
+        elif isinstance(self._amount, float):
+            self.amount -= other
+        return self
 
-    def __imul__(self, other: Number):
+    def __imul__(self, other: Number) -> Self:
         """Multiply the amount of the resource by a number."""
         if other is None:
-            return
-        if isinstance(self.amount, int):
+            return self
+        if isinstance(self._amount, int):
             self.amount *= int(other)
-        elif isinstance(self.amount, float):
+        elif isinstance(self._amount, float):
             self.amount *= other
+        return self
 
-    def __itruediv__(self, other: Number):
+    def __itruediv__(self, other: Number) -> Self:
         """Divide the amount of the resource by a number."""
         if other is None:
-            return
-        if isinstance(self.amount, int):
+            return self
+        if isinstance(self._amount, int):
             self.amount //= int(other)
-        elif isinstance(self.amount, float):
+        elif isinstance(self._amount, float):
             self.amount /= other
+        return self
 
-    def __ifloordiv__(self, other: Number):
+    def __ifloordiv__(self, other: Number) -> Self:
         """Integer divide the amount of the resource by a number."""
         if other is None:
-            return
-        if isinstance(self.amount, int):
+            return self
+        if isinstance(self._amount, int):
             self.amount //= int(other)
-        elif isinstance(self.amount, float):
+        elif isinstance(self._amount, float):
             self.amount //= other
+        return self
 
-    def __imod__(self, other: Number):
+    def __imod__(self, other: Number) -> Self:
         """Make the amount of the resource the modulus of a number."""
         if other is None:
-            return
-        if isinstance(self.amount, int):
+            return self
+        if isinstance(self._amount, int):
             self.amount %= int(other)
-        elif isinstance(self.amount, float):
+        elif isinstance(self._amount, float):
             self.amount %= other
+        return self
 
-    def __ipow__(self, other: Number):
+    def __ipow__(self, other: Number) -> Self:
         """Raise the amount of the resource by a power."""
         if other is None:
-            return
-        if self.amount is not None:
+            return self
+        if self._amount is not None:
             self.amount **= other
+        return self
 
     def __int__(self):
-        """Get the amount of this resourcce as an int. Returns -1 if the resource has no amount."""
-        if isinstance(self.amount, int):
-            return self.amount
-        elif isinstance(self.amount, float):
-            return int(self.amount)
+        """Get the amount of this resource as an int. Returns -1 if the resource has no amount."""
+        if isinstance(self._amount, int):
+            return self._amount
+        elif isinstance(self._amount, float):
+            return int(self._amount)
         return -1
 
     def __float__(self):
-        """Get the amount of this resourcce as a float. Returns -1.0 if the resource has no amount."""
-        if isinstance(self.amount, int):
-            return float(self.amount)
-        if isinstance(self.amount, float):
-            return self.amount
+        """Get the amount of this resource as a float. Returns -1.0 if the resource has no amount."""
+        if isinstance(self._amount, int):
+            return float(self._amount)
+        if isinstance(self._amount, float):
+            return self._amount
         return -1.0
+
+    def __str__(self) -> str:
+        """Get a string representation of the resource."""
+        return self.__repr__()
 
     def __repr__(self):
         """Get a string representation of the resource."""
@@ -311,8 +368,6 @@ class Resource:
 
 class UsingResourceState(State):
     """State in which an Entity is using a :class:`Resource`."""
-
-    from .resource import Resource
 
     resource: Resource
 

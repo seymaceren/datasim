@@ -1,7 +1,10 @@
-from typing import Final, Generic, List, Tuple, TypeVar
+from typing import Final, Generic, List, Literal, Optional, Tuple, TypeVar
+
+from datasim.plot import Plot, PlotType, QueuePlotData
 
 from .entity import Entity
 from .types import Number
+import simulation
 
 EntityType = TypeVar("EntityType", bound=Entity)
 
@@ -12,17 +15,36 @@ class Queue(Generic[EntityType]):
     id: Final[str]
     queue: Final[List[Tuple[EntityType, Number]]]
     capacity: int
+    changed_tick: int
 
-    def __init__(self, id: str, capacity: int = 0):
+    def __init__(
+        self,
+        id: str,
+        capacity: int = 0,
+        auto_plot: PlotType | Literal[False] = PlotType.line,
+        plot_frequency: int = 1,
+        plot_title: Optional[str] = None,
+    ):
         """Create a waiting queue for entities.
 
         Args:
             id (str): Identifier / name of the queue.
             capacity (int): Maximum queue length. Defaults to 0 for no maximum.
+            auto_plot (`PlotType` or `False`, optional): Whether to automatically add a plot to the dashboard
+                for this resource, and which type of plot if so. Defaults to `PlotType.line`.
+            plot_frequency (int, optional): Whether to add a data point every `frequency` ticks.
+                If set to `0`, adds a data point only when the quantity changes. Defaults to `1`.
+            plot_title (Optional[str], optional): An optional plot title. Defaults to `None`.
         """
         self.id = id
         self.capacity = capacity
         self.queue = []
+        self.changed_tick = 0
+
+        simulation.world().add(self)
+
+        if auto_plot:
+            self.make_plot(auto_plot, plot_frequency, plot_title)
 
     @property
     def full(self) -> bool:
@@ -36,6 +58,25 @@ class Queue(Generic[EntityType]):
     def __int__(self) -> int:
         """Get the current length of the queue."""
         return self.__len__()
+
+    def make_plot(
+        self,
+        auto_plot: PlotType = PlotType.line,
+        frequency: int = 1,
+        plot_title: Optional[str] = None,
+    ):
+        simulation.world().add_plot(
+            Plot(
+                self.id,
+                QueuePlotData(
+                    self.id,
+                    frequency,
+                    auto_plot,
+                    plot_title,
+                    legend_y=EntityType.__name__.lower(),
+                ),
+            )
+        )
 
     def enqueue(self, entity: EntityType, amount: Number = None) -> bool:
         """Put an entity at the end of the queue.
@@ -52,36 +93,48 @@ class Queue(Generic[EntityType]):
         """
         if not self.full:
             self.queue.insert(0, (entity, amount))
+            self.changed_tick = simulation.ticks
             return True
 
         return False
 
-    def dequeue(self) -> EntityType | Tuple[EntityType, Number]:
+    def dequeue(self) -> EntityType | Tuple[EntityType, Number] | None:
         """Remove the entity from the front of the queue and returns it.
 
         Returns:
             Entity: The entity that was at the front of this queue.
         """
+        if len(self.queue) == 0:
+            return None
+
         (e, a) = self.queue.pop()
+        self.changed_tick = simulation.ticks
+
         if a is None:
             return e
         return (e, a)
 
-    def peek(self) -> EntityType:
+    def peek(self) -> EntityType | None:
         """Return the entity at the front of the queue without removing it.
 
         Returns:
             Entity: The entity at the front of this queue.
         """
+        if len(self.queue) == 0:
+            return None
+
         (e, a) = self.queue[-1]
         return e
 
-    def peek_with_amount(self) -> Tuple[EntityType, Number]:
+    def peek_with_amount(self) -> Tuple[EntityType, Number] | None:
         """Return the entity at the front of the queue without removing it.
 
         Returns:
             Entity: The entity at the front of this queue.
         """
+        if len(self.queue) == 0:
+            return None
+
         return self.queue[-1]
 
     def prioritize(self, entity: EntityType) -> bool:
@@ -98,6 +151,7 @@ class Queue(Generic[EntityType]):
         ][0]
         if self.queue.remove(entry):
             self.queue.append(entry)
+            self.changed_tick = simulation.ticks
             return True
 
         return False
