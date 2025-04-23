@@ -1,69 +1,70 @@
-from colors import color
-from typing import Dict, Optional
-from datasim import Entity, State, Resource, simulation
+from typing import Dict, List, Optional
+from datasim import Entity, log, LogLevel, State, UsingResourceState, simulation
 
 
-class WaitingPatientState(State):
-    patient: "Patient"
-
-    def __init__(self):
-        super().__init__("Waiting for a bed")
-
-    def tick(self):
-        if not hasattr(self, "patient"):
-            if isinstance(self.entity, Patient):
-                self.patient = self.entity
-            else:
-                return
-
-        self.patient.deteriorate()
-
-
-critical_time_for_condition: Dict[str, Optional[float]] = {
+critical_duration_for_illness: Dict[str, Optional[float]] = {
     "A": None,
     "B": 400.0,
     "C": 200.0,
 }
 
 
+class WaitingPatientState(State):
+    patient: "Patient"
+
+    def __init__(self, patient: "Patient"):
+        super().__init__("Waiting for a bed", patient)
+        self.patient = patient
+
+        critical_duration = critical_duration_for_illness[self.patient.illness]
+        self.critical_time = (
+            simulation.time + critical_duration if critical_duration else None
+        )
+
+    def tick(self):
+        if (
+            self.patient.critical_time is not None
+            and simulation.time >= self.patient.critical_time
+        ):
+            self.patient.died()
+
+
 class PatientData:
     id: str
     enter_time: float
     treatment_time: float
-    condition: str
+    illness: str
+
+    def __init__(self, data: List):
+        self.id = data[0]
+        self.enter_time = float(data[1])
+        self.treatment_time = float(data[2])
+        self.illness = data[3]
 
 
 class Patient(Entity):
     treatment_time: float
-    condition: str
+    illness: str
     alive: bool
 
     critical_time: Optional[float] = None
 
-    def __init__(self, name, condition: str, treatment_time: float):
-        super().__init__(name)
-        self.condition = condition
+    def __init__(self, name, illness: str, treatment_time: float):
+        super().__init__(name, WaitingPatientState)
+        self.illness = illness
         self.treatment_time = treatment_time
-
         self.alive = True
 
-        self.critical_time = critical_time_for_condition[condition]
-
-    def deteriorate(self):
-        if self.critical_time:
-            self.critical_time -= simulation.tick_time
-            if self.critical_time <= 0.0:
-                self.died()
-
-    def resource_done(self, resource: Resource):
-        if resource.resource_type == "beds":
-            print(color(f"Patient {self.name} is treated!", fg="green"))
+    def on_state_leaving(self, old_state: State | None, new_state: State | None):
+        if (
+            isinstance(old_state, UsingResourceState)
+            and old_state.resource.id == "beds"
+            and old_state.completed
+        ):
+            log(f"{self} is treated!", LogLevel.debug, "green")
             simulation.world().remove(self)
 
     def died(self):
         self.alive = False
-        print(
-            color(f"Patient {self.name} died of condition {self.condition}!", fg="red")
-        )
+        log(f"{self} died of illness {self.illness}!", LogLevel.debug, "red")
         simulation.world().remove(self)
-        pass

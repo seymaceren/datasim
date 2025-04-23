@@ -1,32 +1,10 @@
-from enum import Enum
 from typing import Dict, List, Literal, Optional, Self, Tuple
 
 from .entity import Entity, State
-from .plot import Plot, PlotType, ResourcePlotData
+from .logging import log
 from .queue import Queue
-from .types import Number
-import simulation
-
-
-class UseResult(Enum):
-    """The result of a resource usage attempt."""
-
-    success = "success"
-    depleted = "depleted"
-    queued = "queued"
-    in_use = "in_use"
-
-    def __str__(self) -> str:
-        """Get a string representation of the result."""
-        match self:
-            case UseResult.success:
-                return "Success"
-            case UseResult.depleted:
-                return "Failed: Resource depleted"
-            case UseResult.queued:
-                return "Queued"
-            case UseResult.in_use:
-                return "Failed: Resource in use"
+from .types import LogLevel, Number, PlotType, UseResult
+from . import simulation
 
 
 class Resource:
@@ -110,10 +88,19 @@ class Resource:
 
     def make_plot(
         self,
-        auto_plot: PlotType = PlotType.line,
+        plot_type: PlotType = PlotType.line,
         frequency: int = 1,
         plot_title: Optional[str] = None,
     ):
+        """Create a plot for this Resource. Also automatically used when `auto_plot` is True at creation.
+
+        Args:
+            plot_type (PlotType, optional): The type of plot to add. Defaults to PlotType.line.
+            frequency (int, optional): Plot every x ticks or only on change if set to 0. Defaults to 0.
+            plot_title (Optional[str], optional): Optional title for the plot. Defaults to None.
+        """
+        from .plot import Plot, ResourcePlotData
+
         simulation.world().add_plot(
             Plot(
                 self.id,
@@ -121,7 +108,7 @@ class Resource:
                     self.id,
                     self.capacity is None,
                     frequency,
-                    auto_plot,
+                    plot_type,
                     plot_title,
                     legend_y=self.resource_type,
                 ),
@@ -146,7 +133,8 @@ class Resource:
         self,
         user: Entity | Tuple[Entity, Number],
         amount: Number = None,
-        usage_time: float = -1.0,
+        usage_time: Optional[float] = None,
+        remove_from_queue: Optional[Queue] = None,
     ) -> UseResult:
         """Try to use the resource.
 
@@ -156,6 +144,8 @@ class Resource:
         Args:
             user (:class:`Entity`): The :class:`Entity` trying to use the resource, or a tuple with the amount included.
             amount (`int` or `float`, optional): The amount to take. Defaults to None.
+            usage_time (`float`, optional): The time this use will take.
+                If set to None, uses this resource's default usage time. Defaults to None.
 
         Raises:
             `TypeError`: When trying to take from a capacity resource without specifying an amount.
@@ -167,33 +157,66 @@ class Resource:
             amount = user[1]
             user = user[0]
 
-        if self < amount:
+        if self._amount is None:
+            if not self.occupied:
+                self.users.append(user)
+                self.user_index[user] = len(self.users) - 1
+                self.simple_time_left.append(
+                    self.usage_time if usage_time is None else usage_time
+                )
+
+                user.state = UsingResourceState(self, user)
+                return self._logResult(
+                    UseResult.success, user, amount, remove_from_queue
+                )
+            else:
+                if self.queue and self.queue.enqueue(user, amount):
+                    return self._logResult(
+                        UseResult.queued, user, amount, remove_from_queue
+                    )
+
+                return self._logResult(
+                    UseResult.in_use, user, amount, remove_from_queue
+                )
+        elif self < amount:
             if self.queue and self.queue.enqueue(user, amount):
-                return UseResult.queued
+                return self._logResult(
+                    UseResult.queued, user, amount, remove_from_queue
+                )
 
-            return UseResult.depleted
-
-        if self > 0:
+            if self._amount == 0:
+                return self._logResult(
+                    UseResult.depleted, user, amount, remove_from_queue
+                )
+            else:
+                return self._logResult(
+                    UseResult.insufficient, user, amount, remove_from_queue
+                )
+        else:
             if amount is None:
                 raise TypeError(
                     f"{user} is trying to use a capacity Resource without requested amount"
                 )
             self -= amount
-            return UseResult.success
-        elif not self.occupied:
-            self.users.append(user)
-            self.user_index[user] = len(self.users) - 1
-            self.simple_time_left.append(
-                self.usage_time if usage_time == -1.0 else usage_time
-            )
+            return self._logResult(UseResult.success, user, amount, remove_from_queue)
 
-            user.state = UsingResourceState(self)
-            return UseResult.success
-        else:
-            if self.queue and self.queue.enqueue(user, amount):
-                return UseResult.queued
+    def _logResult(
+        self,
+        result: UseResult,
+        user: Entity,
+        amount: Number,
+        remove_from_queue: Optional[Queue],
+    ):
+        usage = str(self) if self._amount is None else f"{amount} of {self}"
+        log(
+            f"{user} trying to use {usage} at {simulation.time}: {result}",
+            LogLevel.verbose,
+            "blue",
+        )
+        if result == UseResult.success and remove_from_queue is not None:
+            remove_from_queue.dequeue()
 
-            return UseResult.depleted
+        return result
 
     def remove_user(self, user: Entity) -> bool:
         """Try to remove a resource user.
@@ -371,13 +394,13 @@ class UsingResourceState(State):
 
     resource: Resource
 
-    def __init__(self, resource: Resource):
+    def __init__(self, resource: Resource, entity: Entity):
         """Create a :class:`UsingResourceState` for the specified :class:`Resource`.
 
         Args:
             resource (:class:`Resource`): The :class:`Resource` being used.
         """
-        super().__init__(f"using {resource}")
+        super().__init__(f"using {resource}", entity, False)
         self.resource = resource
 
     def tick(self):
@@ -385,5 +408,5 @@ class UsingResourceState(State):
         if not hasattr(self, "entity"):
             raise ValueError("UsingResourceState has no entity set!")
         if not self.resource.usage_tick(self.entity):
+            self.completed = True
             self.switch_to = None
-            self.entity.resource_done(self.resource)

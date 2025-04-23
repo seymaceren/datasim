@@ -2,18 +2,21 @@
 
 from .dashboard import Dashboard
 from .entity import Entity, State
-from .plot import Plot, PlotType, PlotData, XYPlotData, CategoryPlotData, NPPlotData
+from .logging import log
+from .plot import Plot, PlotData, XYPlotData, CategoryPlotData, NPPlotData
 from .plot import ResourcePlotData, QueuePlotData, StatePlotData
 from .queue import Queue
-from .resource import Resource, UseResult, UsingResourceState
+from .resource import Resource, UsingResourceState
 from .quantity import Quantity
+from .types import LogLevel, PlotType, UseResult
 from .world import World
-import datasim.simulation as simulation
 
 __all__ = (
     "CategoryPlotData",
     "Dashboard",
     "Entity",
+    "log",
+    "LogLevel",
     "NPPlotData",
     "Plot",
     "PlotData",
@@ -23,7 +26,6 @@ __all__ = (
     "QueuePlotData",
     "Resource",
     "ResourcePlotData",
-    "simulation",
     "State",
     "StatePlotData",
     "UseResult",

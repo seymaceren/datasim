@@ -4,7 +4,9 @@ from plotly.graph_objs._figure import Figure
 import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
 
-import simulation
+from .logging import log
+from .types import LogLevel
+from . import simulation
 
 
 class Dashboard:
@@ -30,11 +32,11 @@ class Dashboard:
             return
 
         simulation.world()._update_plots()
-        print(f"Update {len(self.plots)} plots")
+        log(f"Update {len(self.plots)} plots", LogLevel.verbose)
         for plot_id in self.plots:
             if plot_id not in self.frames:
                 self.frames[plot_id] = st.empty()
-            print(f"Update plot {plot_id}")
+            log(f"Update plot {plot_id}", LogLevel.verbose)
             # TODO put multiple traces in one chart
             self.frames[plot_id].plotly_chart(self.plots[plot_id])
 

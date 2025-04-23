@@ -1,5 +1,4 @@
 from abc import ABC
-from enum import Enum
 from typing import Any, List, Optional, cast
 from pandas import DataFrame
 from plotly.graph_objs._figure import Figure
@@ -12,28 +11,8 @@ from .dashboard import Dashboard
 from .entity import Entity
 from .queue import Queue
 from .resource import Resource
+from .types import PlotType
 import datasim.simulation as simulation
-
-
-class PlotType(Enum):
-    """The type of plot to render."""
-
-    bar = "bar"
-    line = "line"
-    pie = "pie"
-    scatter = "scatter"
-
-    def __str__(self) -> str:
-        """Get a string representation of the plot type."""
-        match self:
-            case PlotType.bar:
-                return "Bar chart"
-            case PlotType.line:
-                return "Line graph"
-            case PlotType.pie:
-                return "Pie chart"
-            case PlotType.scatter:
-                return "Scatter plot"
 
 
 class PlotData(ABC):
@@ -109,7 +88,15 @@ class PlotData(ABC):
                     ),
                 )
             case PlotType.pie:
-                pass
+                self.trace = cast(
+                    Figure,
+                    px.pie(
+                        self._data_frame,
+                        title=self.title,
+                        names=self.legend_x,
+                        values=self.legend_y,
+                    ),
+                )
             case PlotType.scatter:
                 self.trace = cast(
                     Figure,

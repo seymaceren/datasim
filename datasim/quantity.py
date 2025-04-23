@@ -2,7 +2,7 @@ from typing import List, Literal, Optional, Self, Tuple
 
 from .plot import Plot, PlotType, XYPlotData
 from .types import Number
-import simulation
+from . import simulation
 
 
 class Quantity:
@@ -59,13 +59,20 @@ class Quantity:
 
     def make_plot(
         self,
-        auto_plot: PlotType = PlotType.line,
-        plot_frequency: int = 0,
+        plot_type: PlotType = PlotType.line,
+        frequency: int = 0,
         plot_title: Optional[str] = None,
     ):
-        data = XYPlotData([], [], auto_plot, plot_title, legend_y=self.id)
+        """Create a plot for this Quantity. Also automatically used when `auto_plot` is True at creation.
 
-        self._plots.append((plot_frequency, data))
+        Args:
+            plot_type (PlotType, optional): The type of plot to add. Defaults to PlotType.line.
+            frequency (int, optional): Plot every x ticks or only on change if set to 0. Defaults to 0.
+            plot_title (Optional[str], optional): Optional title for the plot. Defaults to None.
+        """
+        data = XYPlotData([], [], plot_type, plot_title, legend_y=self.id)
+
+        self._plots.append((frequency, data))
 
         simulation.world().add_plot(Plot(self.id, data))
 

@@ -9,6 +9,7 @@ from time import sleep
 from typing import Dict, Final, Optional, Self
 
 from .entity import Entity
+from .logging import log, LogLevel
 from .plot import Plot
 from .quantity import Quantity
 from .queue import Queue
@@ -28,6 +29,7 @@ class World(ABC):
     current: Self
     title: Final[str]
     entities: Final[OrderedSet[Entity]]
+    _entity_dict: Final[Dict[str, Entity]]
     plots: Final[Dict[str, Plot]]
     resources: Final[Dict[str, Resource]]
     queues: Final[Dict[str, Queue]]
@@ -48,12 +50,13 @@ class World(ABC):
                 unless running :meth:`simulate()` with `realtime=True`). Defaults to 10.0.
         """
         if simulation.active:
-            print("(Warning: Not launching another instance)")
+            log("(Warning: Not launching another instance)", LogLevel.warning)
             return
         World.current = self
         simulation.active = True
         self.title = title
         self.entities = OrderedSet[Entity]([])
+        self._entity_dict = {}
         self.plots = {}
         self.resources = {}
         self.queues = {}
@@ -65,7 +68,9 @@ class World(ABC):
         simulation.tps = tps
 
         stdout.reconfigure(encoding="utf-8")  # type: ignore
-        print(codecs.open("header", "r", "utf-8").read())  # Draw terminal logo
+        log(
+            codecs.open("header", "r", "utf-8").read(), LogLevel.error
+        )  # Draw terminal logo
 
         self.headless = headless
         if not headless and not self.dashboard:
@@ -83,7 +88,14 @@ class World(ABC):
             obj (:class:`Entity` | :class:`Resource` | (:class:`Queue`): The entity, resource or queue to add.
         """
         if isinstance(obj, Entity):
+            if obj.name in self._entity_dict:
+                if obj != self._entity_dict[obj.name]:
+                    raise ValueError(
+                        f"Another entity with name {obj.name} already exists!"
+                    )
+                return
             self.entities.append(obj)
+            self._entity_dict[obj.name] = obj
         elif isinstance(obj, Resource):
             self.resources[obj.id] = obj
         elif isinstance(obj, Queue):
@@ -112,6 +124,13 @@ class World(ABC):
         except ValueError:
             return False
         return True
+
+    def entity(self, key: str) -> Entity:
+        """Get a Resource by id."""
+        entity = self._entity_dict.get(key, None)
+        if entity is not None:
+            return entity
+        raise KeyError(f"No entity with id '{key}' found!")
 
     def resource(self, key: str) -> Resource:
         """Get a Resource by id."""
@@ -179,26 +198,28 @@ class World(ABC):
         if self.sim_thread:
             self.sim_thread.join()
 
-    def pre_entities_tick(self):
+    def before_entities_update(self):
         """Implement this function to run any code at the start of each tick, \
             before all entities are updated."""
         pass
 
-    def post_entities_tick(self):
+    def after_entities_update(self):
         """Implement this function to run any code at the end of each tick, \
             after all entities have been updated."""
         pass
 
     def _simulation_thread(self):
-        print(
+        log(
             f"\n▟{"▀"*(4+len(self.title))}▜▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▙\n"
             + f"█  {self.title}  ▐  Starting simulation  █\n"
-            + f"▜{"▄"*(4+len(self.title))}▟▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▛\n"
+            + f"▜{"▄"*(4+len(self.title))}▟▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▛\n",
+            LogLevel.debug,
         )
         if simulation.end_tick > 0:
-            print(
+            log(
                 f"{self.title}: Run for {simulation.end_tick / simulation.tps} seconds"
-                + f" ({simulation.end_tick} ticks at {simulation.tps} ticks/second)..."
+                + f" ({simulation.end_tick} ticks at {simulation.tps} ticks/second)...",
+                LogLevel.debug,
             )
 
         self.last_update = 0
@@ -206,23 +227,29 @@ class World(ABC):
         while (
             simulation.end_tick == 0 or simulation.ticks < simulation.end_tick
         ) and not self.stopped:
-            self.pre_entities_tick()
+
+            self.before_entities_update()
+
             for entity in self.entities:
                 entity._tick()
-            self.post_entities_tick()
+
+            self.after_entities_update()
+
             if self.dashboard:
                 for plot in self.plots.values():
                     plot._tick()
+
             simulation.ticks += 1
             simulation.time = simulation.ticks / simulation.tps
             if self.realtime:
                 sleep(simulation.tick_time)
 
         self.ended = True
-        print(
+        log(
             f"\n▟{"▀"*(4+len(self.title))}▜▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▙\n"
             + f"█  {self.title}  ▐  End of simulation  █\n"
-            + f"▜{"▄"*(4+len(self.title))}▟▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▛\n"
+            + f"▜{"▄"*(4+len(self.title))}▟▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▛\n",
+            LogLevel.debug,
         )
 
         self.update_time = 0.0

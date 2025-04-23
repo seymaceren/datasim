@@ -1,7 +1,8 @@
-from datasim import Dashboard, World, simulation
+from datasim import Dashboard, logging, LogLevel, World, simulation
 
 
 def test_world_headless():
+    logging.level = LogLevel.debug
     World.reset()
     world = World(headless=True)
     assert world.title == "Unnamed Simulation"
@@ -15,6 +16,7 @@ def test_world_headless():
 
 
 def test_world_dashboard():
+    logging.level = LogLevel.debug
     World.reset()
     dashboard = Dashboard()
     dashboard._draw()

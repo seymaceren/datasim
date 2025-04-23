@@ -3,7 +3,9 @@ from typing import Final, Optional, Self
 
 import numpy as np
 
-import simulation
+from .logging import log
+from .types import LogLevel
+from . import simulation
 
 
 class Entity(ABC):
@@ -15,7 +17,7 @@ class Entity(ABC):
     registry: Final[dict[type, int]] = {}
     id: Final[int]
     name: Final[str]
-    _state: "State | None"
+    _state: "State | None" = None
     ticks_in_current_state: int
     location: Optional[np.typing.NDArray[np.float64]]
 
@@ -42,9 +44,7 @@ class Entity(ABC):
         if isinstance(initial_state, State):
             self.state = initial_state
         elif isinstance(initial_state, type):
-            self.state = initial_state(initial_state.__name__)
-        else:
-            self.state = None
+            self.state = initial_state(initial_state.__name__, self)
 
         if self.state:
             self.state.switch_to = self.state
@@ -68,9 +68,14 @@ class Entity(ABC):
             TypeError: If the provided type is not a subclass of :class:`State`.
         """
         if isinstance(new_state, type):
-            new_state = new_state()
+            new_state = new_state(f"{self}{type.__name__}", self)
         if not isinstance(new_state, State):
-            raise TypeError("Given type is not a subclass of State")
+            raise TypeError(
+                f"Given type {new_state.__class__.__name__} is not a subclass of State!"
+            )
+        if new_state.entity is not None and new_state.entity != self:
+            raise ValueError(f"{new_state} already belongs to {new_state.entity}!")
+        new_state.entity = self
 
         if self._state:
             self._state.switch_to = new_state
@@ -84,33 +89,59 @@ class Entity(ABC):
         _get_state, _set_state, None, """The current state of the entity."""
     )
 
-    def resource_done(self, resource):
-        """Override to run when this entity's UsingResourceState is done."""
-        pass
-
     def _tick(self):
         if self._state:
-            self._state.tick()
             if self._state.switch_to != self._state:
                 self._change_state(self._state.switch_to)
+            self._state.tick()
 
-    def _change_state(self, new_state):
+    def _change_state(self, new_state: "State | None"):
         if self._state == new_state:
             return
 
-        print(
-            f"{self}: {self._state.__class__.__name__} >> {new_state.__class__.__name__}"
+        log(
+            f"{self}: {self._state.__class__.__name__} >> {new_state.__class__.__name__}",
+            LogLevel.verbose,
         )
+        if self._state:
+            self.on_state_leaving(self._state, new_state)
         self._state = new_state
         if self._state:
-            self._state.entity = self
             self._state.switch_to = self._state
+            if self._state:
+                self.on_state_entered(self._state, new_state)
 
         self.ticks_in_current_state = 0
 
-    def __repr__(self):
+    def on_state_entered(self, old_state: "State | None", new_state: "State | None"):
+        """Implement this function to run when the state starts.
+
+        Args:
+            old_state (State or None): The current state that is being left.
+            new_state (State or None): The state that will replace the current state.
+        """
+        pass
+
+    def on_state_leaving(self, old_state: "State | None", new_state: "State | None"):
+        """Implement this function to run when the current state is being left.
+
+        Args:
+            old_state (State or None): The state that was left.
+            new_state (State or None): The new and current state.
+        """
+        pass
+
+    def __str__(self) -> str:
         """Get a string representation of the entity."""
-        return "Unnamed Entity" if self.name is None else f"Entity {self.name}"
+        return self.__repr__()
+
+    def __repr__(self) -> str:
+        """Get a string representation of the entity."""
+        return (
+            "Unnamed Entity"
+            if self.name is None
+            else f"{self.__class__.__name__} {self.name}"
+        )
 
 
 class State(ABC):
@@ -119,18 +150,34 @@ class State(ABC):
     This should be the only place that entities execute behavior code.
     """
 
-    entity: Entity
+    _entity: Entity
     name: str
+    completed: bool | None
     switch_to: Self | None
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, entity: Entity, completion: bool | None = None):
         """Create a state object.
 
         Args:
             name (str): Descriptive name of this state.
+            entity (Entity): The entity this state belongs to.
+            completion (bool or None, optional): Initial value of this state's `completed` variable,
+                set to `False` if the state represents a task that can be completed or not.
         """
         self.name = name
         self.switch_to = None
+        self.entity = entity
+        self.completed = completion
+
+    def _get_entity(self) -> Entity:
+        return self._entity
+
+    def _set_entity(self, entity: Entity):
+        self._entity = entity
+
+    entity = property(
+        _get_entity, _set_entity, None, """The entity this state belongs to."""
+    )
 
     def tick(self):
         """Implement this function to have the state execute any behavior \

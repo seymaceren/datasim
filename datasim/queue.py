@@ -1,10 +1,9 @@
 from typing import Final, Generic, List, Literal, Optional, Tuple, TypeVar
 
-from datasim.plot import Plot, PlotType, QueuePlotData
-
 from .entity import Entity
-from .types import Number
-import simulation
+from .logging import log
+from .types import LogLevel, PlotType, Number
+from . import simulation
 
 EntityType = TypeVar("EntityType", bound=Entity)
 
@@ -61,17 +60,26 @@ class Queue(Generic[EntityType]):
 
     def make_plot(
         self,
-        auto_plot: PlotType = PlotType.line,
+        plot_type: PlotType = PlotType.line,
         frequency: int = 1,
         plot_title: Optional[str] = None,
     ):
+        """Create a plot for this Queue. Also automatically used when `auto_plot` is True at creation.
+
+        Args:
+            plot_type (PlotType, optional): The type of plot to add. Defaults to PlotType.line.
+            frequency (int, optional): Plot every x ticks or only on change if set to 0. Defaults to 0.
+            plot_title (Optional[str], optional): Optional title for the plot. Defaults to None.
+        """
+        from .plot import Plot, QueuePlotData
+
         simulation.world().add_plot(
             Plot(
                 self.id,
                 QueuePlotData(
                     self.id,
                     frequency,
-                    auto_plot,
+                    plot_type,
                     plot_title,
                     legend_y=EntityType.__name__.lower(),
                 ),
@@ -92,8 +100,15 @@ class Queue(Generic[EntityType]):
                 If the entity was succesfully added to the queue.
         """
         if not self.full:
+            log(
+                f"{entity} joining {self} at tick {simulation.ticks}",
+                LogLevel.verbose,
+                45,
+            )
+
             self.queue.insert(0, (entity, amount))
             self.changed_tick = simulation.ticks
+
             return True
 
         return False
@@ -109,6 +124,12 @@ class Queue(Generic[EntityType]):
 
         (e, a) = self.queue.pop()
         self.changed_tick = simulation.ticks
+
+        log(
+            f"{e} left {self} at tick {simulation.ticks}",
+            LogLevel.verbose,
+            45,
+        )
 
         if a is None:
             return e
@@ -156,7 +177,11 @@ class Queue(Generic[EntityType]):
 
         return False
 
-    def __repr__(self):
+    def __str__(self) -> str:
+        """Get a string representation of this queue."""
+        return self.__repr__()
+
+    def __repr__(self) -> str:
         """Get a string representation of this queue."""
         return f"Queue {self.id} length {len(self.queue)}" + (
             "" if self.capacity == 0 else "/{self.capacity}"
