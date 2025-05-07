@@ -73,18 +73,10 @@ class Queue(Generic[EntityType]):
         """
         from .plot import Plot, QueuePlotData
 
-        simulation.world().add_plot(
-            Plot(
-                self.id,
-                QueuePlotData(
-                    self.id,
-                    frequency,
-                    plot_type,
-                    plot_title,
-                    legend_y=EntityType.__name__.lower(),
-                ),
-            )
+        self.plot = QueuePlotData(
+            self.id, frequency, plot_type, plot_title, legend_y=""
         )
+        simulation.world().add_plot(Plot(self.id, self.plot))
 
     def enqueue(self, entity: EntityType, amount: Number = None) -> bool:
         """Put an entity at the end of the queue.
@@ -99,6 +91,9 @@ class Queue(Generic[EntityType]):
             bool:
                 If the entity was succesfully added to the queue.
         """
+        if hasattr(self, "plot") and self.plot.legend_y == "":
+            self.plot.legend_y = str(entity.plural).lower()
+
         if not self.full:
             log(
                 f"{entity} joining {self} at tick {simulation.ticks}",

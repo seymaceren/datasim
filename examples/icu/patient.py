@@ -12,7 +12,7 @@ critical_duration_for_illness: Dict[str, Optional[float]] = {
 class WaitingPatientState(State):
     patient: "Patient"
 
-    def __init__(self, patient: "Patient"):
+    def __init__(self, _name, patient: "Patient"):
         super().__init__("Waiting for a bed", patient)
         self.patient = patient
 
@@ -43,6 +43,8 @@ class PatientData:
 
 
 class Patient(Entity):
+    plural: str = "Patients"
+
     treatment_time: float
     illness: str
     alive: bool
@@ -50,10 +52,10 @@ class Patient(Entity):
     critical_time: Optional[float] = None
 
     def __init__(self, name, illness: str, treatment_time: float):
-        super().__init__(name, WaitingPatientState)
         self.illness = illness
         self.treatment_time = treatment_time
         self.alive = True
+        super().__init__(name, WaitingPatientState)
 
     def on_state_leaving(self, old_state: State | None, new_state: State | None):
         if (

@@ -21,13 +21,19 @@ class ICU(World):
         self.load_patient_data("examples/icu/simulatiedata.csv")
 
         self.beds = Resource("beds", "beds", 5, plot_title="Beds in use")
-        self.patients_waiting = Queue[Patient]("patients_waiting")
-        self.patients_treated = Quantity("Patients treated", 0)
-        self.patients_died = Quantity("Patients died", 0)
+        self.patients_waiting = Queue[Patient](
+            "patients_waiting", plot_title="Patients waiting"
+        )
+        self.patients_treated = Quantity(
+            "patients_treated", "patients", 0, plot_title="Patients treated"
+        )
+        self.patients_died = Quantity(
+            "patients_died", "patients", 0, plot_title="Patients died"
+        )
 
     def load_patient_data(self, filename: str):
         self.patients = []
-        for row in csv.reader(open(filename)):
+        for row in list(csv.reader(open(filename)))[1:]:
             self.patients.append(PatientData(row))
 
     def remove(self, obj):

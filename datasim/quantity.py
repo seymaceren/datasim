@@ -8,8 +8,10 @@ from . import simulation
 class Quantity:
     """Representation of a custom quantity that can be automatically plotted and exported."""
 
-    """Descriptive name of the quantity."""
+    """Unique identifier of the quantity."""
     id: str
+    """Descriptive type of things or unit of the quantity, used as plot axis legend."""
+    quantity_type: str
     """Optional minimum value of the quantity."""
     min: Number
     """Optional maximum value of the quantity."""
@@ -21,6 +23,7 @@ class Quantity:
     def __init__(
         self,
         id: str,
+        quantity_type: str,
         start_value: Number = None,
         min: Number = None,
         max: Number = None,
@@ -47,6 +50,7 @@ class Quantity:
             plot_title (Optional[str], optional): An optional plot title. Defaults to `None`.
         """
         self.id = id
+        self.quantity_type = quantity_type
         self._plots = []
         self.min = min
         self.max = max
@@ -70,7 +74,12 @@ class Quantity:
             frequency (int, optional): Plot every x ticks or only on change if set to 0. Defaults to 0.
             plot_title (Optional[str], optional): Optional title for the plot. Defaults to None.
         """
-        data = XYPlotData([], [], plot_type, plot_title, legend_y=self.id)
+        x = []
+        y = []
+        if self._value:
+            x.append(0.0)
+            y.append(self._value)
+        data = XYPlotData(x, y, plot_type, plot_title, legend_y=self.quantity_type)
 
         self._plots.append((frequency, data))
 

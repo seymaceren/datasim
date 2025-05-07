@@ -44,7 +44,7 @@ class PlotData(ABC):
         self.legend_x = legend_x
         self.legend_y = legend_y
 
-        self._buffer_size = max(20000, simulation.end_tick)
+        self._buffer_size = max(10000, simulation.end_tick)
         self._buffer_index = 0
         self._x_buffer = np.zeros(self._buffer_size)
         self._y_buffer = np.zeros(self._buffer_size)
@@ -150,6 +150,9 @@ class XYPlotData(PlotData):
             x (float): x value of the data point.
             y (float): y value of the data point.
         """
+        if len(self._x_buffer) <= self._buffer_index:
+            self._x_buffer = np.append(self._x_buffer, np.zeros(self._buffer_size))
+            self._y_buffer = np.append(self._y_buffer, np.zeros(self._buffer_size))
         self._x_buffer[self._buffer_index] = x
         self._y_buffer[self._buffer_index] = y
         self._buffer_index += 1
@@ -268,6 +271,9 @@ class ResourcePlotData(PlotData):
         if (self.frequency == 0 and self.source.changed_tick == simulation.ticks) or (
             simulation.ticks % self.frequency == 0
         ):
+            if len(self._x_buffer) <= self._buffer_index:
+                self._x_buffer = np.append(self._x_buffer, np.zeros(self._buffer_size))
+                self._y_buffer = np.append(self._y_buffer, np.zeros(self._buffer_size))
             self._x_buffer[self._buffer_index] = simulation.time
             self._y_buffer[self._buffer_index] = (
                 len(self.source.users) if self.plot_users else self.source.amount
@@ -307,6 +313,9 @@ class QueuePlotData(PlotData):
         if (self.frequency == 0 and self.source.changed_tick == simulation.ticks) or (
             simulation.ticks % self.frequency == 0
         ):
+            if len(self._x_buffer) <= self._buffer_index:
+                self._x_buffer = np.append(self._x_buffer, np.zeros(self._buffer_size))
+                self._y_buffer = np.append(self._y_buffer, np.zeros(self._buffer_size))
             self._x_buffer[self._buffer_index] = simulation.time
             self._y_buffer[self._buffer_index] = len(self.source)
             self._buffer_index += 1

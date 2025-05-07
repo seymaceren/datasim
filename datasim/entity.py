@@ -14,6 +14,8 @@ class Entity(ABC):
     This can be anything that exhibits behavior.
     """
 
+    plural: str = "Entities"
+
     registry: Final[dict[type, int]] = {}
     id: Final[int]
     name: Final[str]
@@ -93,7 +95,8 @@ class Entity(ABC):
         if self._state:
             if self._state.switch_to != self._state:
                 self._change_state(self._state.switch_to)
-            self._state.tick()
+            if self._state:
+                self._state.tick()
 
     def _change_state(self, new_state: "State | None"):
         if self._state == new_state:

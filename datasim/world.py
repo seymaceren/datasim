@@ -232,6 +232,8 @@ class World(ABC):
 
             for entity in self.entities:
                 entity._tick()
+            for quantity in self.quantities.values():
+                quantity._tick()
 
             self.after_entities_update()
 
