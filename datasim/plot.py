@@ -250,7 +250,7 @@ class ResourcePlotData(PlotData):
         frequency: int = 1,
         plot_type: PlotType = PlotType.line,
         title: Optional[str] = None,
-        legend_x: str = "seconds",
+        legend_x: str = "",
         legend_y: str = "amount",
     ):
         """Create a data source from watching the amount of a :class:`Resource`.
@@ -262,6 +262,8 @@ class ResourcePlotData(PlotData):
             plot_type ("scatter", "line", "bar", "pie", optional): Type of plot to show. Defaults to "line".
             title (Optional[str], optional): Title to use over the plot. Defaults to None.
         """
+        if legend_x == "":
+            legend_x = simulation.time_unit
         super().__init__(plot_type, title, legend_x, legend_y)
         self.source = simulation.world().resource(source_id)
         self.plot_users = plot_users
@@ -293,7 +295,7 @@ class QueuePlotData(PlotData):
         frequency: int = 1,
         plot_type: PlotType = PlotType.line,
         title: Optional[str] = None,
-        legend_x: str = "seconds",
+        legend_x: str = "",
         legend_y: str = "length",
     ):
         """Create a data source from watching the size of a :class:`Queue`.
@@ -305,6 +307,8 @@ class QueuePlotData(PlotData):
             plot_type ("scatter", "line", "bar", "pie", optional): Type of plot to show. Defaults to "line".
             title (Optional[str], optional): Title to use over the plot. Defaults to None.
         """
+        if legend_x == "":
+            legend_x = simulation.time_unit
         super().__init__(plot_type, title, legend_x, legend_y)
         self.source = simulation.world().queue(source_id)
         self.frequency = frequency

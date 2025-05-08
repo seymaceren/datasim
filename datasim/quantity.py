@@ -79,7 +79,14 @@ class Quantity:
         if self._value:
             x.append(0.0)
             y.append(self._value)
-        data = XYPlotData(x, y, plot_type, plot_title, legend_y=self.quantity_type)
+        data = XYPlotData(
+            x,
+            y,
+            plot_type,
+            plot_title,
+            legend_x=simulation.time_unit,
+            legend_y=self.quantity_type,
+        )
 
         self._plots.append((frequency, data))
 

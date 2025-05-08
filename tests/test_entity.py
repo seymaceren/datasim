@@ -22,7 +22,7 @@ def test_entity():
         en2.state = world
     old_state = en2.state
     en2.state = IdleState
-    assert world.simulate(tps=1.0, end_tick=20)
+    assert world.simulate(tpu=1.0, end_tick=20)
     assert len(world.entities) == 2
     assert world.entity(en1.name).id == en1.id
     assert world.entity("Test entity 2") == en2

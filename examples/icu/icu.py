@@ -14,13 +14,13 @@ class ICU(World):
     icu: Self
 
     def __init__(self, headless: bool = False):
-        super().__init__("ICU world", headless=headless)
+        super().__init__("ICU world", tpu=5, time_unit="hours", headless=headless)
 
         ICU.icu = self
 
         self.load_patient_data("examples/icu/simulatiedata.csv")
 
-        self.beds = Resource("beds", "beds", 5, plot_title="Beds in use")
+        self.beds = Resource("beds", "beds", 20, plot_title="Beds in use")
         self.patients_waiting = Queue[Patient](
             "patients_waiting", plot_title="Patients waiting"
         )
@@ -62,6 +62,7 @@ class ICU(World):
                     usage_time=next.treatment_time,
                     remove_from_queue=self.patients_waiting,
                 )
+            next = self.patients_waiting.peek()
 
     def after_entities_update(self):
         if len(self.patients_waiting) == 0 and len(self.entities) == 0:

@@ -28,6 +28,7 @@ See sample code, the basic setup is:
 ## Plans
 Before calling a release 0.9 (beta), I plan to implement the following:
 
+- Output all data from the simulation
 - Add entity generator class using Numpy random distributions
 - Define more plot attributes and combine multiple traces in a plot
 - Add a batch runner to gather data over multiple World runs instead of within one

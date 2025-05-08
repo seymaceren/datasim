@@ -37,7 +37,7 @@ def test_plot():
     assert isinstance(e, Entity)
     assert a == 10.0
 
-    world.simulate(tps=100.0, end_tick=20, realtime=True)
+    world.simulate(tpu=100.0, end_tick=20, realtime=True)
     world.wait()
     world._draw()
     assert len(plot.data) == 1

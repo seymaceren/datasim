@@ -39,7 +39,8 @@ class World(ABC):
     def __init__(
         self,
         title: str = "Unnamed Simulation",
-        tps: float = 10.0,
+        tpu: float = 10.0,
+        time_unit: str = "seconds",
         headless: bool = False,
     ):
         """Create the simulation world.
@@ -65,7 +66,8 @@ class World(ABC):
 
         self.dashboard: Optional[Dashboard] = None
         self.ended: bool = False
-        simulation.tps = tps
+        simulation.tpu = tpu
+        simulation.time_unit = time_unit
 
         stdout.reconfigure(encoding="utf-8")  # type: ignore
         log(
@@ -155,7 +157,7 @@ class World(ABC):
 
     def simulate(
         self,
-        tps: float = 0.0,
+        tpu: float = 0.0,
         end_tick: int = 0,
         restart: bool = False,
         realtime: bool = False,
@@ -164,22 +166,22 @@ class World(ABC):
         """Run the simulation.
 
         Args:
-            tps (float, optional): Ticks per second (only in simulation time, unless `realtime=True`).
-                Defaults to :data:`simulation.tps`.
+            tps (float, optional): Ticks per time unit (only in simulation time, unless `realtime=True`).
+                Defaults to :data:`simulation.tpu`.
             end_tick (int, optional): Tick count to end, unless set to 0. Defaults to 0.
             restart (bool, optional): Set to `True` if this is a restart. Defaults to False.
-            realtime (bool, optional): Run the simulation in real seconds. Defaults to False.
+            realtime (bool, optional): Run the simulation in real time. Defaults to False.
             stop_server (bool, optional): Terminate streamlit python process after the simulation is done.
                 For now, use only for faster debugging workflow. Defaults to False.
         """
         if self.ended and not restart:
             return False
 
-        if tps > 0.0:
-            simulation.tps = tps
+        if tpu > 0.0:
+            simulation.tpu = tpu
         simulation.ticks = 0
         simulation.time = 0.0
-        simulation.tick_time = 1.0 / simulation.tps
+        simulation.tick_time = 1.0 / simulation.tpu
         simulation.end_tick = end_tick
         self.realtime = realtime
         self.stop_server = stop_server
@@ -217,9 +219,21 @@ class World(ABC):
         )
         if simulation.end_tick > 0:
             log(
-                f"{self.title}: Run for {simulation.end_tick / simulation.tps} seconds"
-                + f" ({simulation.end_tick} ticks at {simulation.tps} ticks/second)...",
+                f"{self.title}: Run for {simulation.end_tick / simulation.tpu} {simulation.time_unit}"
+                + f" ({simulation.end_tick} ticks at {simulation.tpu} ticks/{simulation.time_unit})...",
                 LogLevel.debug,
+            )
+        else:
+            log(
+                f"{self.title}: Running indefinitely at {simulation.tpu} ticks/{simulation.time_unit})...",
+                LogLevel.debug,
+            )
+
+        if self.realtime and simulation.time_unit != "seconds":
+            log(
+                "Warning: Running realtime only works with seconds as time unit:\n"
+                + f"Simulation timing will use seconds instead of {simulation.time_unit}!",
+                LogLevel.warning,
             )
 
         self.last_update = 0
@@ -242,7 +256,7 @@ class World(ABC):
                     plot._tick()
 
             simulation.ticks += 1
-            simulation.time = simulation.ticks / simulation.tps
+            simulation.time = simulation.ticks / simulation.tpu
             if self.realtime:
                 sleep(simulation.tick_time)
 

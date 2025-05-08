@@ -235,7 +235,7 @@ class Resource:
         return True
 
     def usage_tick(self, user: Entity) -> bool:
-        """Override this function for more complex usage time than a flat number of seconds."""
+        """Override this function for more complex usage time than a flat number of time units."""
         index = self.user_index[user]
         left = self.simple_time_left[index]
         left -= simulation.tick_time
