@@ -1,6 +1,7 @@
 from colors import color
 from typing import Optional
 
+from . import simulation
 from .types import LogLevel
 
 
@@ -13,6 +14,7 @@ def log(
     fg_color: Optional[int | str] = None,
     bg_color: Optional[int | str] = None,
     style: Optional[str] = None,
+    include_timestamp: bool = True,
 ):
     """Print a log message if the log level is set at least as high as the message.
 
@@ -22,6 +24,14 @@ def log(
         fg_color (Optional[int | str], optional): Optional text foreground color. Defaults to None.
         bg_color (Optional[int | str], optional): Optional text background color. _description_. Defaults to None.
         style (Optional[str], optional): Optional text style. Defaults to None.
+        include_timestamp (bool, optional): Whether to include the timestamp before the message. Defaults to True.
     """
     if level >= log_level:
-        print(color(message, fg=fg_color, bg=bg_color, style=style))
+        print(
+            color(
+                f"[{simulation.time}] {message}" if include_timestamp else message,
+                fg=fg_color,
+                bg=bg_color,
+                style=style,
+            )
+        )

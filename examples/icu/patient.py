@@ -17,8 +17,12 @@ class WaitingPatientState(State):
         self.patient = patient
 
         critical_duration = critical_duration_for_illness[self.patient.illness]
-        self.critical_time = (
+        self.patient.critical_time = (
             simulation.time + critical_duration if critical_duration else None
+        )
+        log(
+            f"{self.patient} will be critical at time {self.patient.critical_time}",
+            LogLevel.verbose,
         )
 
     def tick(self):

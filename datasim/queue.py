@@ -96,7 +96,7 @@ class Queue(Generic[EntityType]):
 
         if not self.full:
             log(
-                f"{entity} joining {self} at tick {simulation.ticks}",
+                f"{entity} joining {self}",
                 LogLevel.verbose,
                 45,
             )
@@ -121,7 +121,7 @@ class Queue(Generic[EntityType]):
         self.changed_tick = simulation.ticks
 
         log(
-            f"{e} left {self} at tick {simulation.ticks}",
+            f"{e} left {self}",
             LogLevel.verbose,
             45,
         )

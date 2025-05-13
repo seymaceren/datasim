@@ -20,7 +20,7 @@ class ICU(World):
 
         self.load_patient_data("examples/icu/simulatiedata.csv")
 
-        self.beds = Resource("beds", "beds", 20, plot_title="Beds in use")
+        self.beds = Resource("beds", "beds", 5, plot_title="Beds in use")
         self.patients_waiting = Queue[Patient](
             "patients_waiting", plot_title="Patients waiting"
         )

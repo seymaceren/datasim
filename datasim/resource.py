@@ -209,7 +209,7 @@ class Resource:
     ):
         usage = str(self) if self._amount is None else f"{amount} of {self}"
         log(
-            f"{user} trying to use {usage} at {simulation.time}: {result}",
+            f"{user} trying to use {usage}: {result}",
             LogLevel.verbose,
             "blue",
         )

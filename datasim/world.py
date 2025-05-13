@@ -51,7 +51,11 @@ class World(ABC):
                 unless running :meth:`simulate()` with `realtime=True`). Defaults to 10.0.
         """
         if simulation.active:
-            log("(Warning: Not launching another instance)", LogLevel.warning)
+            log(
+                "(Warning: Not launching another instance)",
+                LogLevel.warning,
+                include_timestamp=False,
+            )
             return
         World.current = self
         simulation.active = True
@@ -71,7 +75,9 @@ class World(ABC):
 
         stdout.reconfigure(encoding="utf-8")  # type: ignore
         log(
-            codecs.open("header", "r", "utf-8").read(), LogLevel.error
+            codecs.open("header", "r", "utf-8").read(),
+            LogLevel.error,
+            include_timestamp=False,
         )  # Draw terminal logo
 
         self.headless = headless
@@ -216,17 +222,20 @@ class World(ABC):
             + f"█  {self.title}  ▐  Starting simulation  █\n"
             + f"▜{"▄"*(4+len(self.title))}▟▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▛\n",
             LogLevel.debug,
+            include_timestamp=False,
         )
         if simulation.end_tick > 0:
             log(
                 f"{self.title}: Run for {simulation.end_tick / simulation.tpu} {simulation.time_unit}"
                 + f" ({simulation.end_tick} ticks at {simulation.tpu} ticks/{simulation.time_unit})...",
                 LogLevel.debug,
+                include_timestamp=False,
             )
         else:
             log(
                 f"{self.title}: Running indefinitely at {simulation.tpu} ticks/{simulation.time_unit})...",
                 LogLevel.debug,
+                include_timestamp=False,
             )
 
         if self.realtime and simulation.time_unit != "seconds":
@@ -234,6 +243,7 @@ class World(ABC):
                 "Warning: Running realtime only works with seconds as time unit:\n"
                 + f"Simulation timing will use seconds instead of {simulation.time_unit}!",
                 LogLevel.warning,
+                include_timestamp=False,
             )
 
         self.last_update = 0
@@ -266,6 +276,7 @@ class World(ABC):
             + f"█  {self.title}  ▐  End of simulation  █\n"
             + f"▜{"▄"*(4+len(self.title))}▟▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▛\n",
             LogLevel.debug,
+            include_timestamp=False,
         )
 
         self.update_time = 0.0
