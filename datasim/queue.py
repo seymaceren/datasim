@@ -1,8 +1,8 @@
-from typing import Final, Generic, List, Literal, Optional, Tuple, TypeVar
+from typing import Final, Generic, List, Tuple, TypeVar
 
 from .entity import Entity
 from .logging import log
-from .types import LogLevel, PlotType, Number
+from .types import LogLevel, Number, PlotOptions
 from . import simulation
 
 EntityType = TypeVar("EntityType", bound=Entity)
@@ -20,9 +20,10 @@ class Queue(Generic[EntityType]):
         self,
         id: str,
         capacity: int = 0,
-        auto_plot: PlotType | Literal[False] = PlotType.line,
+        auto_plot: bool = True,
+        plot_id: str = "",
         plot_frequency: int = 1,
-        plot_title: Optional[str] = None,
+        plot_options: PlotOptions = PlotOptions(),
     ):
         """Create a waiting queue for entities.
 
@@ -43,7 +44,7 @@ class Queue(Generic[EntityType]):
         simulation.world().add(self)
 
         if auto_plot:
-            self.make_plot(auto_plot, plot_frequency, plot_title)
+            self.make_plot(plot_id, plot_frequency, plot_options)
 
     @property
     def full(self) -> bool:
@@ -60,9 +61,9 @@ class Queue(Generic[EntityType]):
 
     def make_plot(
         self,
-        plot_type: PlotType = PlotType.line,
+        plot_id: str = "",
         frequency: int = 1,
-        plot_title: Optional[str] = None,
+        plot_options: PlotOptions = PlotOptions(),
     ):
         """Create a plot for this Queue. Also automatically used when `auto_plot` is True at creation.
 
@@ -71,12 +72,13 @@ class Queue(Generic[EntityType]):
             frequency (int, optional): Plot every x ticks or only on change if set to 0. Defaults to 0.
             plot_title (Optional[str], optional): Optional title for the plot. Defaults to None.
         """
-        from .plot import Plot, QueuePlotData
+        from .plot import QueuePlotData
 
-        self.plot = QueuePlotData(
-            self.id, frequency, plot_type, plot_title, legend_y=""
-        )
-        simulation.world().add_plot(Plot(self.id, self.plot))
+        if plot_id == "":
+            plot_id = self.id
+
+        self.plot = QueuePlotData(self.id, frequency, plot_options)
+        simulation.world().add_plot(plot_id, self.plot)
 
     def enqueue(self, entity: EntityType, amount: Number = None) -> bool:
         """Put an entity at the end of the queue.
@@ -91,8 +93,8 @@ class Queue(Generic[EntityType]):
             bool:
                 If the entity was succesfully added to the queue.
         """
-        if hasattr(self, "plot") and self.plot.legend_y == "":
-            self.plot.legend_y = str(entity.plural).lower()
+        if hasattr(self, "plot") and self.plot.options.legend_y == "":
+            self.plot.options.legend_y = str(entity.plural).lower()
 
         if not self.full:
             log(

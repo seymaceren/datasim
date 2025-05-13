@@ -10,7 +10,7 @@ from typing import Dict, Final, Optional, Self
 
 from .entity import Entity
 from .logging import log, LogLevel
-from .plot import Plot
+from .plot import Plot, PlotData
 from .quantity import Quantity
 from .queue import Queue
 from .resource import Resource
@@ -296,7 +296,11 @@ class World(ABC):
         for plot in self.plots.values():
             plot._update()
 
-    def add_plot(self, plot: Plot):
+    def add_plot(self, plot_id: str, data: PlotData) -> Plot:
         """Add a plot to the dashboard."""
-        # if self.dashboard:
-        self.plots[plot.id] = plot
+        if plot_id not in self.plots:
+            self.plots[plot_id] = Plot(plot_id, data)
+        else:
+            self.plots[plot_id].add_trace(data)
+
+        return self.plots[plot_id]

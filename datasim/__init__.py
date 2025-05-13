@@ -3,7 +3,7 @@
 from .dashboard import Dashboard
 from .entity import Entity, State
 from .logging import log
-from .plot import Plot, PlotData, XYPlotData, CategoryPlotData, NPPlotData
+from .plot import Plot, PlotOptions, PlotData, XYPlotData, CategoryPlotData, NPPlotData
 from .plot import ResourcePlotData, QueuePlotData, StatePlotData
 from .queue import Queue
 from .resource import Resource, UsingResourceState
@@ -20,6 +20,7 @@ __all__ = (
     "NPPlotData",
     "Plot",
     "PlotData",
+    "PlotOptions",
     "PlotType",
     "Quantity",
     "Queue",

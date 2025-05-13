@@ -1,6 +1,5 @@
 from datasim import (
     Entity,
-    Plot,
     Queue,
     Resource,
     World,
@@ -13,12 +12,11 @@ def test_plot():
     world = World("Plot test", 0.5)
 
     xydata = XYPlotData()
-    plot = Plot("plot1", xydata)
     xydata.append(10, 20)
     xydata.append(20, 50)
     xydata.append(30, 30)
     assert xydata._buffer_index == 3
-    world.add_plot(plot)
+    plot = world.add_plot("plot1", xydata)
 
     water = Resource("water", "water", 0, 0.0, 0, 1000.0, 100.0)
     assert water._amount == 100.0

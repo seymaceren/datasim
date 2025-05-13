@@ -1,9 +1,9 @@
-from typing import Dict, List, Literal, Optional, Self, Tuple
+from typing import Dict, List, Optional, Self, Tuple
 
 from .entity import Entity, State
 from .logging import log
 from .queue import Queue
-from .types import LogLevel, Number, PlotType, UseResult
+from .types import LogLevel, Number, PlotOptions, UseResult
 from . import simulation
 
 
@@ -43,9 +43,10 @@ class Resource:
         max_queue: int = 0,
         capacity: Number = None,
         start_amount: Number = None,
-        auto_plot: PlotType | Literal[False] = PlotType.line,
+        auto_plot: bool = True,
+        plot_id: str = "",
         plot_frequency: int = 1,
-        plot_title: Optional[str] = None,
+        plot_options: PlotOptions = PlotOptions(),
     ):
         """Create a resource.
 
@@ -84,13 +85,13 @@ class Resource:
         simulation.world().add(self)
 
         if auto_plot:
-            self.make_plot(auto_plot, plot_frequency, plot_title)
+            self.make_plot(plot_id, plot_frequency, plot_options)
 
     def make_plot(
         self,
-        plot_type: PlotType = PlotType.line,
+        plot_id: str = "",
         frequency: int = 1,
-        plot_title: Optional[str] = None,
+        plot_options: PlotOptions = PlotOptions(),
     ):
         """Create a plot for this Resource. Also automatically used when `auto_plot` is True at creation.
 
@@ -99,20 +100,17 @@ class Resource:
             frequency (int, optional): Plot every x ticks or only on change if set to 0. Defaults to 0.
             plot_title (Optional[str], optional): Optional title for the plot. Defaults to None.
         """
-        from .plot import Plot, ResourcePlotData
+        from .plot import ResourcePlotData
+
+        if plot_id == "":
+            plot_id = self.id
+
+        if plot_options.legend_y == "":
+            plot_options.legend_y = self.resource_type
 
         simulation.world().add_plot(
-            Plot(
-                self.id,
-                ResourcePlotData(
-                    self.id,
-                    self.capacity is None,
-                    frequency,
-                    plot_type,
-                    plot_title,
-                    legend_y=self.resource_type,
-                ),
-            )
+            plot_id,
+            ResourcePlotData(self.id, self.capacity is None, frequency, plot_options),
         )
 
     def _get(self) -> Number:

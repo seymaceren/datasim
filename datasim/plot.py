@@ -11,27 +11,21 @@ from .dashboard import Dashboard
 from .entity import Entity
 from .queue import Queue
 from .resource import Resource
-from .types import PlotType
+from .types import PlotOptions, PlotType
 import datasim.simulation as simulation
 
 
 class PlotData(ABC):
     """Abstract superclass of different types of data to plot."""
 
-    plot_type: PlotType
-    title: Optional[str]
     trace: Optional[Figure] = None
     dashboard: Optional[Dashboard] = None
     plot: Optional[Any] = None
-    legend_x: str
-    legend_y: str
+    options: PlotOptions
 
     def __init__(
         self,
-        plot_type: PlotType,
-        title: Optional[str],
-        legend_x: str = "x",
-        legend_y: str = "y",
+        options: PlotOptions = PlotOptions(),
     ):
         """Create a data source to plot from.
 
@@ -39,10 +33,13 @@ class PlotData(ABC):
             plot_type ("scatter", "line", "bar", "pie"): Type of plot to render.
             title (str, optional): Title to use over the plot. Defaults to None.
         """
-        self.plot_type = plot_type
-        self.title = title
-        self.legend_x = legend_x
-        self.legend_y = legend_y
+        if options.legend_x == "":
+            options.legend_x = "x"
+        if options.legend_y == "":
+            options.legend_y = "y"
+        if options.plot_type is None:
+            options.plot_type = PlotType.line
+        self.options = options
 
         self._buffer_size = max(10000, simulation.end_tick)
         self._buffer_index = 0
@@ -53,8 +50,8 @@ class PlotData(ABC):
     def _data_frame(self):
         return DataFrame(
             {
-                self.legend_x: self._x_buffer[: self._buffer_index],
-                self.legend_y: self._y_buffer[: self._buffer_index],
+                self.options.legend_x: self._x_buffer[: self._buffer_index],
+                self.options.legend_y: self._y_buffer[: self._buffer_index],
             }
         )
 
@@ -66,15 +63,53 @@ class PlotData(ABC):
         if self.dashboard is None:
             return
 
-        match self.plot_type:
+        match self.options.plot_type:
             case PlotType.bar:
                 self.trace = cast(
                     Figure,
                     px.bar(
                         self._data_frame,
-                        title=self.title,
-                        x=self.legend_x,
-                        y=self.legend_y,
+                        title=self.options.title,
+                        x=self.options.legend_x,
+                        y=self.options.legend_y,
+                        color=self.options.color,
+                        color_continuous_scale=self.options.color_continuous_scale,
+                        color_continuous_midpoint=self.options.color_continuous_midpoint,
+                        color_discrete_map=self.options.color_discrete_map,
+                        color_discrete_sequence=self.options.color_discrete_sequence,
+                        range_color=self.options.range_color,
+                        hover_name=self.options.hover_name,
+                        hover_data=self.options.hover_data,
+                        custom_data=self.options.custom_data,
+                        text=self.options.text,
+                        facet_row=self.options.facet_row,
+                        facet_col=self.options.facet_col,
+                        facet_row_spacing=self.options.facet_row_spacing,
+                        facet_col_spacing=self.options.facet_col_spacing,
+                        facet_col_wrap=self.options.facet_col_wrap,
+                        error_x=self.options.error_x,
+                        error_y=self.options.error_y,
+                        error_x_minus=self.options.error_x_minus,
+                        error_y_minus=self.options.error_y_minus,
+                        category_orders=self.options.category_orders,
+                        labels=self.options.labels,
+                        orientation=self.options.orientation,
+                        opacity=self.options.opacity,
+                        log_x=self.options.log_x,
+                        log_y=self.options.log_y,
+                        range_x=self.options.range_x,
+                        range_y=self.options.range_y,
+                        pattern_shape=self.options.pattern_shape,
+                        pattern_shape_map=self.options.pattern_shape_map,
+                        pattern_shape_sequence=self.options.pattern_shape_sequence,
+                        base=self.options.base,
+                        barmode=self.options.barmode,
+                        text_auto=self.options.text_auto,
+                        template=self.options.template,
+                        width=self.options.width,
+                        height=self.options.height,
+                        animation_frame=self.options.animation_frame,
+                        animation_group=self.options.animation_group,
                     ),
                 )
             case PlotType.line:
@@ -82,9 +117,47 @@ class PlotData(ABC):
                     Figure,
                     px.line(
                         self._data_frame,
-                        title=self.title,
-                        x=self.legend_x,
-                        y=self.legend_y,
+                        title=self.options.title,
+                        x=self.options.legend_x,
+                        y=self.options.legend_y,
+                        color=self.options.color,
+                        color_discrete_map=self.options.color_discrete_map,
+                        color_discrete_sequence=self.options.color_discrete_sequence,
+                        symbol=self.options.symbol,
+                        symbol_map=self.options.symbol_map,
+                        symbol_sequence=self.options.symbol_sequence,
+                        hover_name=self.options.hover_name,
+                        hover_data=self.options.hover_data,
+                        custom_data=self.options.custom_data,
+                        text=self.options.text,
+                        facet_row=self.options.facet_row,
+                        facet_col=self.options.facet_col,
+                        facet_row_spacing=self.options.facet_row_spacing,
+                        facet_col_spacing=self.options.facet_col_spacing,
+                        facet_col_wrap=self.options.facet_col_wrap,
+                        error_x=self.options.error_x,
+                        error_y=self.options.error_y,
+                        error_x_minus=self.options.error_x_minus,
+                        error_y_minus=self.options.error_y_minus,
+                        category_orders=self.options.category_orders,
+                        labels=self.options.labels,
+                        orientation=self.options.orientation,
+                        log_x=self.options.log_x,
+                        log_y=self.options.log_y,
+                        range_x=self.options.range_x,
+                        range_y=self.options.range_y,
+                        render_mode=self.options.render_mode,
+                        template=self.options.template,
+                        width=self.options.width,
+                        height=self.options.height,
+                        line_dash=self.options.line_dash,
+                        line_dash_map=self.options.line_dash_map,
+                        line_dash_sequence=self.options.line_dash_sequence,
+                        line_group=self.options.line_group,
+                        line_shape=self.options.line_shape,
+                        markers=self.options.markers,
+                        animation_frame=self.options.animation_frame,
+                        animation_group=self.options.animation_group,
                     ),
                 )
             case PlotType.pie:
@@ -92,9 +165,27 @@ class PlotData(ABC):
                     Figure,
                     px.pie(
                         self._data_frame,
-                        title=self.title,
-                        names=self.legend_x,
-                        values=self.legend_y,
+                        title=self.options.title,
+                        names=self.options.legend_x,
+                        values=self.options.legend_y,
+                        color=self.options.color,
+                        color_discrete_map=self.options.color_discrete_map,
+                        color_discrete_sequence=self.options.color_discrete_sequence,
+                        hover_name=self.options.hover_name,
+                        hover_data=self.options.hover_data,
+                        custom_data=self.options.custom_data,
+                        facet_row=self.options.facet_row,
+                        facet_col=self.options.facet_col,
+                        facet_row_spacing=self.options.facet_row_spacing,
+                        facet_col_spacing=self.options.facet_col_spacing,
+                        facet_col_wrap=self.options.facet_col_wrap,
+                        category_orders=self.options.category_orders,
+                        hole=self.options.hole,
+                        labels=self.options.labels,
+                        opacity=self.options.opacity,
+                        template=self.options.template,
+                        width=self.options.width,
+                        height=self.options.height,
                     ),
                 )
             case PlotType.scatter:
@@ -102,9 +193,53 @@ class PlotData(ABC):
                     Figure,
                     px.scatter(
                         self._data_frame,
-                        x=self.legend_x,
-                        y=self.legend_y,
-                        title=self.title,
+                        x=self.options.legend_x,
+                        y=self.options.legend_y,
+                        title=self.options.title,
+                        color=self.options.color,
+                        color_continuous_scale=self.options.color_continuous_scale,
+                        color_continuous_midpoint=self.options.color_continuous_midpoint,
+                        color_discrete_map=self.options.color_discrete_map,
+                        color_discrete_sequence=self.options.color_discrete_sequence,
+                        range_color=self.options.range_color,
+                        size=self.options.size,
+                        size_max=self.options.size_max,
+                        symbol=self.options.symbol,
+                        symbol_map=self.options.symbol_map,
+                        symbol_sequence=self.options.symbol_sequence,
+                        hover_name=self.options.hover_name,
+                        hover_data=self.options.hover_data,
+                        custom_data=self.options.custom_data,
+                        text=self.options.text,
+                        facet_row=self.options.facet_row,
+                        facet_col=self.options.facet_col,
+                        facet_row_spacing=self.options.facet_row_spacing,
+                        facet_col_spacing=self.options.facet_col_spacing,
+                        facet_col_wrap=self.options.facet_col_wrap,
+                        error_x=self.options.error_x,
+                        error_y=self.options.error_y,
+                        error_x_minus=self.options.error_x_minus,
+                        error_y_minus=self.options.error_y_minus,
+                        category_orders=self.options.category_orders,
+                        labels=self.options.labels,
+                        orientation=self.options.orientation,
+                        opacity=self.options.opacity,
+                        marginal_x=self.options.marginal_x,
+                        marginal_y=self.options.marginal_y,
+                        trendline=self.options.trendline,
+                        trendline_options=self.options.trendline_options,
+                        trendline_scope=self.options.trendline_scope,
+                        trendline_color_override=self.options.trendline_color_override,
+                        log_x=self.options.log_x,
+                        log_y=self.options.log_y,
+                        range_x=self.options.range_x,
+                        range_y=self.options.range_y,
+                        render_mode=self.options.render_mode,
+                        template=self.options.template,
+                        width=self.options.width,
+                        height=self.options.height,
+                        animation_frame=self.options.animation_frame,
+                        animation_group=self.options.animation_group,
                     ),
                 )
 
@@ -126,10 +261,7 @@ class XYPlotData(PlotData):
         self,
         data_x: List[float] = [],
         data_y: List[float] = [],
-        plot_type: PlotType = PlotType.line,
-        title: Optional[str] = None,
-        legend_x: str = "x",
-        legend_y: str = "y",
+        options: PlotOptions = PlotOptions(),
     ):
         """Create a data source from x and y lists of floats.
 
@@ -139,7 +271,7 @@ class XYPlotData(PlotData):
             plot_type ("scatter", "line", "bar", "pie", optional): Type of plot to show. Defaults to "line".
             title (Optional[str], optional): Title to use over the plot. Defaults to None.
         """
-        super().__init__(plot_type, title, legend_x, legend_y)
+        super().__init__(options)
         self._x_buffer[: len(data_x)] = data_x
         self._y_buffer[: len(data_y)] = data_y
 
@@ -168,10 +300,7 @@ class CategoryPlotData(PlotData):
         self,
         data_x: List[str] = [],
         data_y: List[float] = [],
-        plot_type: PlotType = PlotType.line,
-        title: Optional[str] = None,
-        legend_x: str = "category",
-        legend_y: str = "value",
+        options: PlotOptions = PlotOptions(),
     ):
         """Create a data source from x as categories and y as float values.
 
@@ -181,7 +310,11 @@ class CategoryPlotData(PlotData):
             plot_type ("scatter", "line", "bar", "pie", optional): Type of plot to show. Defaults to "line".
             title (Optional[str], optional): Title to use over the plot. Defaults to None.
         """
-        super().__init__(plot_type, title, legend_x, legend_y)
+        if options.legend_x == "":
+            options.legend_x = "category"
+        if options.legend_y == "":
+            options.legend_y = "value"
+        super().__init__(options)
         self.data_x = data_x
         self.data_y = data_y
 
@@ -205,10 +338,7 @@ class NPPlotData(PlotData):
     def __init__(
         self,
         data: np.ndarray,
-        plot_type: PlotType = PlotType.line,
-        title: Optional[str] = None,
-        legend_x: str = "x",
-        legend_y: str = "y",
+        options: PlotOptions = PlotOptions(),
     ):
         """Create a data source from a Numpy array.
 
@@ -221,7 +351,7 @@ class NPPlotData(PlotData):
         Raises:
             `TypeError`: When trying to take from a capacity resource without specifying an amount.
         """
-        super().__init__(plot_type, title, legend_x, legend_y)
+        super().__init__(options)
         if data.shape[1] != 2:  # TODO add 3 when adding 3D plots
             raise ValueError("")
         self.data = data
@@ -230,8 +360,8 @@ class NPPlotData(PlotData):
     def _data_frame(self):
         return DataFrame(
             {
-                self.legend_x: self.data[0],
-                self.legend_y: self.data[1],
+                self.options.legend_x: self.data[0],
+                self.options.legend_y: self.data[1],
             }
         )
 
@@ -248,10 +378,7 @@ class ResourcePlotData(PlotData):
         source_id: str,
         plot_users: bool = False,
         frequency: int = 1,
-        plot_type: PlotType = PlotType.line,
-        title: Optional[str] = None,
-        legend_x: str = "",
-        legend_y: str = "amount",
+        options: PlotOptions = PlotOptions(),
     ):
         """Create a data source from watching the amount of a :class:`Resource`.
 
@@ -262,9 +389,11 @@ class ResourcePlotData(PlotData):
             plot_type ("scatter", "line", "bar", "pie", optional): Type of plot to show. Defaults to "line".
             title (Optional[str], optional): Title to use over the plot. Defaults to None.
         """
-        if legend_x == "":
-            legend_x = simulation.time_unit
-        super().__init__(plot_type, title, legend_x, legend_y)
+        if options.legend_x == "":
+            options.legend_x = simulation.time_unit
+        if options.legend_y == "":
+            options.legend_y = "amount"
+        super().__init__(options)
         self.source = simulation.world().resource(source_id)
         self.plot_users = plot_users
         self.frequency = frequency
@@ -293,10 +422,7 @@ class QueuePlotData(PlotData):
         self,
         source_id: str,
         frequency: int = 1,
-        plot_type: PlotType = PlotType.line,
-        title: Optional[str] = None,
-        legend_x: str = "",
-        legend_y: str = "length",
+        options: PlotOptions = PlotOptions(),
     ):
         """Create a data source from watching the size of a :class:`Queue`.
 
@@ -307,9 +433,11 @@ class QueuePlotData(PlotData):
             plot_type ("scatter", "line", "bar", "pie", optional): Type of plot to show. Defaults to "line".
             title (Optional[str], optional): Title to use over the plot. Defaults to None.
         """
-        if legend_x == "":
-            legend_x = simulation.time_unit
-        super().__init__(plot_type, title, legend_x, legend_y)
+        if options.legend_x == "":
+            options.legend_x = simulation.time_unit
+        if options.legend_y == "":
+            options.legend_y = "length"
+        super().__init__(options)
         self.source = simulation.world().queue(source_id)
         self.frequency = frequency
 
@@ -335,8 +463,7 @@ class StatePlotData(PlotData):
         self,
         data: Entity,
         frequency: int = 1,
-        plot_type: PlotType = PlotType.line,
-        title: Optional[str] = None,
+        options: PlotOptions = PlotOptions(),
     ):
         """Create a data source from watching the state of an :class:`Entity`.
 
@@ -347,7 +474,13 @@ class StatePlotData(PlotData):
             plot_type ("scatter", "line", "bar", "pie", optional): Type of plot to show. Defaults to "line".
             title (Optional[str], optional): Title to use over the plot. Defaults to None.
         """
-        super().__init__(plot_type, title)
+        if options.legend_x == "":
+            options.legend_x = simulation.time_unit
+        if options.legend_y == "":
+            options.legend_y = "state"
+        if options.plot_type is None:
+            options.plot_type = PlotType.scatter
+        super().__init__(options)
         self.data = data
         self.frequency = frequency
 

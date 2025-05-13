@@ -1,6 +1,6 @@
-from typing import List, Literal, Optional, Self, Tuple
+from typing import List, Self, Tuple
 
-from .plot import Plot, PlotType, XYPlotData
+from .plot import PlotOptions, XYPlotData
 from .types import Number
 from . import simulation
 
@@ -27,9 +27,10 @@ class Quantity:
         start_value: Number = None,
         min: Number = None,
         max: Number = None,
-        auto_plot: PlotType | Literal[False] = PlotType.line,
+        auto_plot: bool = True,
+        plot_id: str = "",
         plot_frequency: int = 1,
-        plot_title: Optional[str] = None,
+        plot_options: PlotOptions = PlotOptions(),
     ):
         """Create a quantity.
 
@@ -59,13 +60,13 @@ class Quantity:
         simulation.world().add(self)
 
         if auto_plot:
-            self.make_plot(auto_plot, plot_frequency, plot_title)
+            self.make_plot(plot_id, plot_frequency, plot_options)
 
     def make_plot(
         self,
-        plot_type: PlotType = PlotType.line,
+        plot_id="",
         frequency: int = 0,
-        plot_title: Optional[str] = None,
+        plot_options: PlotOptions = PlotOptions(),
     ):
         """Create a plot for this Quantity. Also automatically used when `auto_plot` is True at creation.
 
@@ -74,23 +75,24 @@ class Quantity:
             frequency (int, optional): Plot every x ticks or only on change if set to 0. Defaults to 0.
             plot_title (Optional[str], optional): Optional title for the plot. Defaults to None.
         """
+        if plot_id == "":
+            plot_id = self.id
+
+        if plot_options.legend_x == "":
+            plot_options.legend_x = simulation.time_unit
+        if plot_options.legend_y == "":
+            plot_options.legend_y = self.quantity_type
+
         x = []
         y = []
         if self._value:
             x.append(0.0)
             y.append(self._value)
-        data = XYPlotData(
-            x,
-            y,
-            plot_type,
-            plot_title,
-            legend_x=simulation.time_unit,
-            legend_y=self.quantity_type,
-        )
+        data = XYPlotData(x, y, plot_options)
 
         self._plots.append((frequency, data))
 
-        simulation.world().add_plot(Plot(self.id, data))
+        simulation.world().add_plot(plot_id, data)
 
     def _tick(self):
         if self._value:

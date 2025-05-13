@@ -1,7 +1,7 @@
 import csv
 from typing import List, Self
 
-from datasim import Quantity, Queue, Resource, simulation, World
+from datasim import PlotOptions, Quantity, Queue, Resource, simulation, World
 from .patient import PatientData, Patient
 
 
@@ -20,15 +20,39 @@ class ICU(World):
 
         self.load_patient_data("examples/icu/simulatiedata.csv")
 
-        self.beds = Resource("beds", "beds", 5, plot_title="Beds in use")
+        self.beds = Resource(
+            "beds",
+            "beds",
+            5,
+            plot_id="ICU",
+            plot_options=PlotOptions(
+                title="Beds in use", color_discrete_sequence=["blue"]
+            ),
+        )
         self.patients_waiting = Queue[Patient](
-            "patients_waiting", plot_title="Patients waiting"
+            "patients_waiting",
+            plot_id="ICU",
+            plot_options=PlotOptions(
+                title="Patients waiting", color_discrete_sequence=["black"]
+            ),
         )
         self.patients_treated = Quantity(
-            "patients_treated", "patients", 0, plot_title="Patients treated"
+            "patients_treated",
+            "patients",
+            0,
+            plot_id="ICU",
+            plot_options=PlotOptions(
+                title="Patients treated", color_discrete_sequence=["green"]
+            ),
         )
         self.patients_died = Quantity(
-            "patients_died", "patients", 0, plot_title="Patients died"
+            "patients_died",
+            "patients",
+            0,
+            plot_id="ICU",
+            plot_options=PlotOptions(
+                title="Patients died", color_discrete_sequence=["red"]
+            ),
         )
 
     def load_patient_data(self, filename: str):
