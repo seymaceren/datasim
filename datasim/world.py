@@ -6,7 +6,7 @@ from os import getpid
 from sys import stdout
 from threading import Thread
 from time import sleep
-from typing import Dict, Final, Optional, Self
+from typing import Dict, Final, Optional, Self, Tuple
 
 from .entity import Entity
 from .logging import log, LogLevel
@@ -296,11 +296,12 @@ class World(ABC):
         for plot in self.plots.values():
             plot._update()
 
-    def add_plot(self, plot_id: str, data: PlotData) -> Plot:
+    def add_plot(self, plot_id: str, data: PlotData) -> Tuple[Plot, int]:
         """Add a plot to the dashboard."""
+        index = 0
         if plot_id not in self.plots:
             self.plots[plot_id] = Plot(plot_id, data)
         else:
-            self.plots[plot_id].add_trace(data)
+            index = self.plots[plot_id].add_trace(data)
 
-        return self.plots[plot_id]
+        return (self.plots[plot_id], index)

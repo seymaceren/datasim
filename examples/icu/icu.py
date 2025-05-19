@@ -23,17 +23,23 @@ class ICU(World):
         self.beds = Resource(
             "beds",
             "beds",
-            5,
+            20,
             plot_id="ICU",
             plot_options=PlotOptions(
-                title="Beds in use", color_discrete_sequence=["blue"]
+                title="ICU",
+                name="Beds in use",
+                color_discrete_sequence=["blue"],
+                legend_y="beds",
+                secondary_y=True,
             ),
         )
         self.patients_waiting = Queue[Patient](
             "patients_waiting",
             plot_id="ICU",
             plot_options=PlotOptions(
-                title="Patients waiting", color_discrete_sequence=["black"]
+                name="Patients waiting",
+                color_discrete_sequence=["orange"],
+                legend_y="patients",
             ),
         )
         self.patients_treated = Quantity(
@@ -42,7 +48,9 @@ class ICU(World):
             0,
             plot_id="ICU",
             plot_options=PlotOptions(
-                title="Patients treated", color_discrete_sequence=["green"]
+                name="Patients treated",
+                color_discrete_sequence=["green"],
+                legend_y="patients",
             ),
         )
         self.patients_died = Quantity(
@@ -51,7 +59,9 @@ class ICU(World):
             0,
             plot_id="ICU",
             plot_options=PlotOptions(
-                title="Patients died", color_discrete_sequence=["red"]
+                name="Patients died",
+                color_discrete_sequence=["red"],
+                legend_y="patients",
             ),
         )
 

@@ -1,11 +1,13 @@
 from abc import ABC
-from typing import Any, List, Optional, cast
+from typing import Any, List, Optional
 from pandas import DataFrame
 from plotly.graph_objs._figure import Figure
+from plotly.subplots import make_subplots
+from plotly.colors import convert_colors_to_same_type, unlabel_rgb
 
 import numpy as np
 import plotly.express as px
-import streamlit as st
+from webcolors import name_to_rgb
 
 from .dashboard import Dashboard
 from .entity import Entity
@@ -19,8 +21,8 @@ class PlotData(ABC):
     """Abstract superclass of different types of data to plot."""
 
     trace: Optional[Figure] = None
-    dashboard: Optional[Dashboard] = None
     plot: Optional[Any] = None
+    plot_index: Optional[int] = 0
     options: PlotOptions
 
     def __init__(
@@ -55,200 +57,198 @@ class PlotData(ABC):
             }
         )
 
-    def _update_traces(self):
-        if self.dashboard is None:
-            if "dashboard" in st.session_state:
-                self.dashboard = cast(Dashboard, st.session_state.dashboard)
-
-        if self.dashboard is None:
-            return
-
+    def _update_trace(self):
         match self.options.plot_type:
             case PlotType.bar:
-                self.trace = cast(
-                    Figure,
-                    px.bar(
-                        self._data_frame,
-                        title=self.options.title,
-                        x=self.options.legend_x,
-                        y=self.options.legend_y,
-                        color=self.options.color,
-                        color_continuous_scale=self.options.color_continuous_scale,
-                        color_continuous_midpoint=self.options.color_continuous_midpoint,
-                        color_discrete_map=self.options.color_discrete_map,
-                        color_discrete_sequence=self.options.color_discrete_sequence,
-                        range_color=self.options.range_color,
-                        hover_name=self.options.hover_name,
-                        hover_data=self.options.hover_data,
-                        custom_data=self.options.custom_data,
-                        text=self.options.text,
-                        facet_row=self.options.facet_row,
-                        facet_col=self.options.facet_col,
-                        facet_row_spacing=self.options.facet_row_spacing,
-                        facet_col_spacing=self.options.facet_col_spacing,
-                        facet_col_wrap=self.options.facet_col_wrap,
-                        error_x=self.options.error_x,
-                        error_y=self.options.error_y,
-                        error_x_minus=self.options.error_x_minus,
-                        error_y_minus=self.options.error_y_minus,
-                        category_orders=self.options.category_orders,
-                        labels=self.options.labels,
-                        orientation=self.options.orientation,
-                        opacity=self.options.opacity,
-                        log_x=self.options.log_x,
-                        log_y=self.options.log_y,
-                        range_x=self.options.range_x,
-                        range_y=self.options.range_y,
-                        pattern_shape=self.options.pattern_shape,
-                        pattern_shape_map=self.options.pattern_shape_map,
-                        pattern_shape_sequence=self.options.pattern_shape_sequence,
-                        base=self.options.base,
-                        barmode=self.options.barmode,
-                        text_auto=self.options.text_auto,
-                        template=self.options.template,
-                        width=self.options.width,
-                        height=self.options.height,
-                        animation_frame=self.options.animation_frame,
-                        animation_group=self.options.animation_group,
+                self.trace = px.bar(
+                    self._data_frame,
+                    title=self.options.title,
+                    x=self.options.legend_x,
+                    y=self.options.legend_y,
+                    color=self.options.color,
+                    color_continuous_scale=self.options.color_continuous_scale,
+                    color_continuous_midpoint=self.options.color_continuous_midpoint,
+                    color_discrete_map=self.options.color_discrete_map,
+                    color_discrete_sequence=self.options.color_discrete_sequence,
+                    range_color=self.options.range_color,
+                    hover_name=self.options.hover_name,
+                    hover_data=self.options.hover_data,
+                    custom_data=self.options.custom_data,
+                    text=self.options.text,
+                    facet_row=self.options.facet_row,
+                    facet_col=self.options.facet_col,
+                    facet_row_spacing=self.options.facet_row_spacing,
+                    facet_col_spacing=self.options.facet_col_spacing,
+                    facet_col_wrap=self.options.facet_col_wrap,
+                    error_x=self.options.error_x,
+                    error_y=self.options.error_y,
+                    error_x_minus=self.options.error_x_minus,
+                    error_y_minus=self.options.error_y_minus,
+                    category_orders=self.options.category_orders,
+                    labels=(
+                        self.options.labels
+                        or {self.options.legend_y: self.options.name}
                     ),
+                    orientation=self.options.orientation,
+                    opacity=self.options.opacity,
+                    log_x=self.options.log_x,
+                    log_y=self.options.log_y,
+                    range_x=self.options.range_x,
+                    range_y=self.options.range_y,
+                    pattern_shape=self.options.pattern_shape,
+                    pattern_shape_map=self.options.pattern_shape_map,
+                    pattern_shape_sequence=self.options.pattern_shape_sequence,
+                    base=self.options.base,
+                    barmode=self.options.barmode,
+                    text_auto=self.options.text_auto,
+                    template=self.options.template,
+                    width=self.options.width,
+                    height=self.options.height,
+                    animation_frame=self.options.animation_frame,
+                    animation_group=self.options.animation_group,
                 )
+                if self.options.secondary_y:
+                    self.trace.update_yaxes(secondary_y=True)
+                    self.trace.update_traces(yaxis="y2")
             case PlotType.line:
-                self.trace = cast(
-                    Figure,
-                    px.line(
-                        self._data_frame,
-                        title=self.options.title,
-                        x=self.options.legend_x,
-                        y=self.options.legend_y,
-                        color=self.options.color,
-                        color_discrete_map=self.options.color_discrete_map,
-                        color_discrete_sequence=self.options.color_discrete_sequence,
-                        symbol=self.options.symbol,
-                        symbol_map=self.options.symbol_map,
-                        symbol_sequence=self.options.symbol_sequence,
-                        hover_name=self.options.hover_name,
-                        hover_data=self.options.hover_data,
-                        custom_data=self.options.custom_data,
-                        text=self.options.text,
-                        facet_row=self.options.facet_row,
-                        facet_col=self.options.facet_col,
-                        facet_row_spacing=self.options.facet_row_spacing,
-                        facet_col_spacing=self.options.facet_col_spacing,
-                        facet_col_wrap=self.options.facet_col_wrap,
-                        error_x=self.options.error_x,
-                        error_y=self.options.error_y,
-                        error_x_minus=self.options.error_x_minus,
-                        error_y_minus=self.options.error_y_minus,
-                        category_orders=self.options.category_orders,
-                        labels=self.options.labels,
-                        orientation=self.options.orientation,
-                        log_x=self.options.log_x,
-                        log_y=self.options.log_y,
-                        range_x=self.options.range_x,
-                        range_y=self.options.range_y,
-                        render_mode=self.options.render_mode,
-                        template=self.options.template,
-                        width=self.options.width,
-                        height=self.options.height,
-                        line_dash=self.options.line_dash,
-                        line_dash_map=self.options.line_dash_map,
-                        line_dash_sequence=self.options.line_dash_sequence,
-                        line_group=self.options.line_group,
-                        line_shape=self.options.line_shape,
-                        markers=self.options.markers,
-                        animation_frame=self.options.animation_frame,
-                        animation_group=self.options.animation_group,
+                self.trace = px.line(
+                    self._data_frame,
+                    title=self.options.title,
+                    x=self.options.legend_x,
+                    y=self.options.legend_y,
+                    color=self.options.color,
+                    color_discrete_map=self.options.color_discrete_map,
+                    color_discrete_sequence=self.options.color_discrete_sequence,
+                    symbol=self.options.symbol,
+                    symbol_map=self.options.symbol_map,
+                    symbol_sequence=self.options.symbol_sequence,
+                    hover_name=self.options.hover_name,
+                    hover_data=self.options.hover_data,
+                    custom_data=self.options.custom_data,
+                    text=self.options.text,
+                    facet_row=self.options.facet_row,
+                    facet_col=self.options.facet_col,
+                    facet_row_spacing=self.options.facet_row_spacing,
+                    facet_col_spacing=self.options.facet_col_spacing,
+                    facet_col_wrap=self.options.facet_col_wrap,
+                    error_x=self.options.error_x,
+                    error_y=self.options.error_y,
+                    error_x_minus=self.options.error_x_minus,
+                    error_y_minus=self.options.error_y_minus,
+                    category_orders=self.options.category_orders,
+                    labels=(
+                        self.options.labels
+                        or {self.options.legend_y: self.options.name}
                     ),
+                    orientation=self.options.orientation,
+                    log_x=self.options.log_x,
+                    log_y=self.options.log_y,
+                    range_x=self.options.range_x,
+                    range_y=self.options.range_y,
+                    render_mode=self.options.render_mode,
+                    template=self.options.template,
+                    width=self.options.width,
+                    height=self.options.height,
+                    line_dash=self.options.line_dash,
+                    line_dash_map=self.options.line_dash_map,
+                    line_dash_sequence=self.options.line_dash_sequence,
+                    line_group=self.options.line_group,
+                    line_shape=self.options.line_shape,
+                    markers=self.options.markers,
+                    animation_frame=self.options.animation_frame,
+                    animation_group=self.options.animation_group,
                 )
+                if self.options.secondary_y:
+                    self.trace.update_yaxes(secondary_y=True)
+                    self.trace.update_traces(yaxis="y2")
             case PlotType.pie:
-                self.trace = cast(
-                    Figure,
-                    px.pie(
-                        self._data_frame,
-                        title=self.options.title,
-                        names=self.options.legend_x,
-                        values=self.options.legend_y,
-                        color=self.options.color,
-                        color_discrete_map=self.options.color_discrete_map,
-                        color_discrete_sequence=self.options.color_discrete_sequence,
-                        hover_name=self.options.hover_name,
-                        hover_data=self.options.hover_data,
-                        custom_data=self.options.custom_data,
-                        facet_row=self.options.facet_row,
-                        facet_col=self.options.facet_col,
-                        facet_row_spacing=self.options.facet_row_spacing,
-                        facet_col_spacing=self.options.facet_col_spacing,
-                        facet_col_wrap=self.options.facet_col_wrap,
-                        category_orders=self.options.category_orders,
-                        hole=self.options.hole,
-                        labels=self.options.labels,
-                        opacity=self.options.opacity,
-                        template=self.options.template,
-                        width=self.options.width,
-                        height=self.options.height,
+                self.trace = px.pie(
+                    self._data_frame,
+                    title=self.options.title,
+                    names=self.options.legend_x,
+                    values=self.options.legend_y,
+                    color=self.options.color,
+                    color_discrete_map=self.options.color_discrete_map,
+                    color_discrete_sequence=self.options.color_discrete_sequence,
+                    hover_name=self.options.hover_name,
+                    hover_data=self.options.hover_data,
+                    custom_data=self.options.custom_data,
+                    facet_row=self.options.facet_row,
+                    facet_col=self.options.facet_col,
+                    facet_row_spacing=self.options.facet_row_spacing,
+                    facet_col_spacing=self.options.facet_col_spacing,
+                    facet_col_wrap=self.options.facet_col_wrap,
+                    category_orders=self.options.category_orders,
+                    hole=self.options.hole,
+                    labels=(
+                        self.options.labels
+                        or {self.options.legend_y: self.options.name}
                     ),
+                    opacity=self.options.opacity,
+                    template=self.options.template,
+                    width=self.options.width,
+                    height=self.options.height,
                 )
+                if self.options.secondary_y:
+                    self.trace.update_yaxes(secondary_y=True)
+                    self.trace.update_traces(yaxis="y2")
             case PlotType.scatter:
-                self.trace = cast(
-                    Figure,
-                    px.scatter(
-                        self._data_frame,
-                        x=self.options.legend_x,
-                        y=self.options.legend_y,
-                        title=self.options.title,
-                        color=self.options.color,
-                        color_continuous_scale=self.options.color_continuous_scale,
-                        color_continuous_midpoint=self.options.color_continuous_midpoint,
-                        color_discrete_map=self.options.color_discrete_map,
-                        color_discrete_sequence=self.options.color_discrete_sequence,
-                        range_color=self.options.range_color,
-                        size=self.options.size,
-                        size_max=self.options.size_max,
-                        symbol=self.options.symbol,
-                        symbol_map=self.options.symbol_map,
-                        symbol_sequence=self.options.symbol_sequence,
-                        hover_name=self.options.hover_name,
-                        hover_data=self.options.hover_data,
-                        custom_data=self.options.custom_data,
-                        text=self.options.text,
-                        facet_row=self.options.facet_row,
-                        facet_col=self.options.facet_col,
-                        facet_row_spacing=self.options.facet_row_spacing,
-                        facet_col_spacing=self.options.facet_col_spacing,
-                        facet_col_wrap=self.options.facet_col_wrap,
-                        error_x=self.options.error_x,
-                        error_y=self.options.error_y,
-                        error_x_minus=self.options.error_x_minus,
-                        error_y_minus=self.options.error_y_minus,
-                        category_orders=self.options.category_orders,
-                        labels=self.options.labels,
-                        orientation=self.options.orientation,
-                        opacity=self.options.opacity,
-                        marginal_x=self.options.marginal_x,
-                        marginal_y=self.options.marginal_y,
-                        trendline=self.options.trendline,
-                        trendline_options=self.options.trendline_options,
-                        trendline_scope=self.options.trendline_scope,
-                        trendline_color_override=self.options.trendline_color_override,
-                        log_x=self.options.log_x,
-                        log_y=self.options.log_y,
-                        range_x=self.options.range_x,
-                        range_y=self.options.range_y,
-                        render_mode=self.options.render_mode,
-                        template=self.options.template,
-                        width=self.options.width,
-                        height=self.options.height,
-                        animation_frame=self.options.animation_frame,
-                        animation_group=self.options.animation_group,
+                self.trace = px.scatter(
+                    self._data_frame,
+                    x=self.options.legend_x,
+                    y=self.options.legend_y,
+                    title=self.options.title,
+                    color=self.options.color,
+                    color_continuous_scale=self.options.color_continuous_scale,
+                    color_continuous_midpoint=self.options.color_continuous_midpoint,
+                    color_discrete_map=self.options.color_discrete_map,
+                    color_discrete_sequence=self.options.color_discrete_sequence,
+                    range_color=self.options.range_color,
+                    size=self.options.size,
+                    size_max=self.options.size_max,
+                    symbol=self.options.symbol,
+                    symbol_map=self.options.symbol_map,
+                    symbol_sequence=self.options.symbol_sequence,
+                    hover_name=self.options.hover_name,
+                    hover_data=self.options.hover_data,
+                    custom_data=self.options.custom_data,
+                    text=self.options.text,
+                    facet_row=self.options.facet_row,
+                    facet_col=self.options.facet_col,
+                    facet_row_spacing=self.options.facet_row_spacing,
+                    facet_col_spacing=self.options.facet_col_spacing,
+                    facet_col_wrap=self.options.facet_col_wrap,
+                    error_x=self.options.error_x,
+                    error_y=self.options.error_y,
+                    error_x_minus=self.options.error_x_minus,
+                    error_y_minus=self.options.error_y_minus,
+                    category_orders=self.options.category_orders,
+                    labels=(
+                        self.options.labels
+                        or {self.options.legend_y: self.options.name}
                     ),
+                    orientation=self.options.orientation,
+                    opacity=self.options.opacity,
+                    marginal_x=self.options.marginal_x,
+                    marginal_y=self.options.marginal_y,
+                    trendline=self.options.trendline,
+                    trendline_options=self.options.trendline_options,
+                    trendline_scope=self.options.trendline_scope,
+                    trendline_color_override=self.options.trendline_color_override,
+                    log_x=self.options.log_x,
+                    log_y=self.options.log_y,
+                    range_x=self.options.range_x,
+                    range_y=self.options.range_y,
+                    render_mode=self.options.render_mode,
+                    template=self.options.template,
+                    width=self.options.width,
+                    height=self.options.height,
+                    animation_frame=self.options.animation_frame,
+                    animation_group=self.options.animation_group,
                 )
-
-        if (
-            self.plot
-            and self.plot.id not in self.dashboard.plots
-            and self.trace is not None
-        ):
-            self.dashboard.plots[self.plot.id] = self.trace
+                if self.options.secondary_y:
+                    self.trace.update_yaxes(secondary_y=True)
+                    self.trace.update_traces(yaxis="y2")
 
     def _tick(self):
         pass
@@ -494,6 +494,7 @@ class Plot:
     title: Optional[str]
     figure: Figure
     data: List[PlotData]
+    dashboard: Dashboard
 
     def __init__(self, id: str, *args: PlotData):
         """Create a plot to add to the dashboard using `World.add_plot()`.
@@ -504,6 +505,12 @@ class Plot:
         """
         self.id = id
         self.data = []
+
+        dash = simulation.world().dashboard
+        if dash is None:
+            return
+        self.dashboard: Dashboard = dash
+
         for arg in args:
             self.add_trace(arg)
 
@@ -531,11 +538,51 @@ class Plot:
         Returns:
             int: Index of the added data set.
         """
-        index: int = len(self.data)
+        if data in self.data:
+            return self.data.index(data)
         data.plot = self
+        data.plot_index = len(self.data)
         self.data.append(data)
-        return index
+        return data.plot_index
 
     def _update(self):
-        for data in self.data:
-            data._update_traces()
+        self.dashboard.plots.clear()
+
+        secondary_y = any([data.options.secondary_y for data in self.data])
+
+        for plotdata in self.data:
+            plotdata._update_trace()
+            if secondary_y and plotdata.plot and plotdata.trace:
+                if plotdata.plot.id not in self.dashboard.plots:
+                    self.dashboard.plots[plotdata.plot.id] = make_subplots(
+                        specs=[[{"secondary_y": True}]]
+                    )
+                    self.dashboard.plots[plotdata.plot.id].layout.xaxis.title = (  # type: ignore
+                        plotdata.options.legend_x
+                    )
+
+        for plotdata in self.data:
+            if plotdata.plot and plotdata.trace:
+                for data in plotdata.trace["data"]:
+                    data["showlegend"] = True  # type: ignore
+                    data["name"] = plotdata.options.name  # type: ignore
+                    self.dashboard.plots[plotdata.plot.id].add_traces([data])
+                    if plotdata.options.secondary_y:
+                        self.dashboard.plots[plotdata.plot.id].layout.yaxis2.title = (  # type: ignore
+                            plotdata.options.legend_y
+                        )
+                        if isinstance(plotdata.options.color_discrete_sequence, list):
+                            color = plotdata.options.color_discrete_sequence[0]
+                            plcolors = convert_colors_to_same_type(color, "rgb")
+                            if len(plcolors[0]) == 0:
+                                rgb = name_to_rgb(color)
+                                r, g, b = rgb.red, rgb.green, rgb.blue
+                            else:
+                                (r, g, b) = unlabel_rgb(plcolors[0][0])
+                            self.dashboard.plots[plotdata.plot.id].update_yaxes(
+                                gridcolor=f"rgba({r},{g},{b},0.5)", secondary_y=True
+                            )
+                    else:
+                        self.dashboard.plots[plotdata.plot.id].layout.yaxis.title = (  # type: ignore
+                            plotdata.options.legend_y
+                        )

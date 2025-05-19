@@ -38,6 +38,6 @@ def test_plot():
     world.simulate(tpu=100.0, end_tick=20, realtime=True)
     world.wait()
     world._draw()
-    assert len(plot.data) == 1
-    assert plot.data[0] == xydata
+    assert len(plot[0].data) == 1
+    assert plot[0].data[0] == xydata
     assert xydata.plot == plot

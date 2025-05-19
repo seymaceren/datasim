@@ -49,9 +49,11 @@ class PlotType(Enum):
 
 class PlotOptions:
     title: Optional[str]
+    name: Optional[str]
     plot_type: Optional[PlotType]
     legend_x: str
     legend_y: str
+    secondary_y: bool
     color: Optional[str]
     color_continuous_scale: Optional[Any]
     color_continuous_midpoint: Optional[Any]
@@ -113,9 +115,11 @@ class PlotOptions:
     def __init__(
         self,
         title: Optional[str] = None,
+        name: Optional[str] = None,
         plot_type: Optional[PlotType] = None,
         legend_x: str = "",
         legend_y: str = "",
+        secondary_y: bool = False,
         color: Optional[str] = None,
         color_continuous_scale: Optional[Any] = None,
         color_continuous_midpoint: Optional[Any] = None,
@@ -175,9 +179,11 @@ class PlotOptions:
         trendline_color_override: Optional[Any] = None,
     ):
         self.title = title
+        self.name = name
         self.plot_type = plot_type
         self.legend_x = legend_x
         self.legend_y = legend_y
+        self.secondary_y = secondary_y
         self.color = color
         self.color_continuous_scale = color_continuous_scale
         self.color_continuous_midpoint = color_continuous_midpoint

@@ -16,3 +16,4 @@ sphinx>=8.2.3
 furo>=2024.8.6
 ordered_set>=4.1.0
 ansicolors>=1.1.8
+webcolors>=24.11.1
