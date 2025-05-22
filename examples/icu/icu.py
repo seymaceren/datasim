@@ -1,7 +1,8 @@
 import csv
+import os
 from typing import List, Self
 
-from datasim import PlotOptions, Quantity, Queue, Resource, simulation, World
+from datasim import Quantity, Queue, Resource, simulation, World
 from .patient import PatientData, Patient
 
 
@@ -14,56 +15,15 @@ class ICU(World):
     icu: Self
 
     def __init__(self, headless: bool = False):
-        super().__init__("ICU world", tpu=5, time_unit="hours", headless=headless)
-
+        super().__init__(
+            definition_file=os.path.join(
+                os.path.abspath(os.path.dirname(__file__)), "icu.yaml"
+            ),
+            headless=headless,
+        )
         ICU.icu = self
 
         self.load_patient_data("examples/icu/simulatiedata.csv")
-
-        self.beds = Resource(
-            "beds",
-            "beds",
-            20,
-            plot_id="ICU",
-            plot_options=PlotOptions(
-                title="ICU",
-                name="Beds in use",
-                color_discrete_sequence=["blue"],
-                legend_y="beds",
-                secondary_y=True,
-            ),
-        )
-        self.patients_waiting = Queue[Patient](
-            "patients_waiting",
-            plot_id="ICU",
-            plot_options=PlotOptions(
-                name="Patients waiting",
-                color_discrete_sequence=["orange"],
-                legend_y="patients",
-            ),
-        )
-        self.patients_treated = Quantity(
-            "patients_treated",
-            "patients",
-            0,
-            plot_id="ICU",
-            plot_options=PlotOptions(
-                name="Patients treated",
-                color_discrete_sequence=["green"],
-                legend_y="patients",
-            ),
-        )
-        self.patients_died = Quantity(
-            "patients_died",
-            "patients",
-            0,
-            plot_id="ICU",
-            plot_options=PlotOptions(
-                name="Patients died",
-                color_discrete_sequence=["red"],
-                legend_y="patients",
-            ),
-        )
 
     def load_patient_data(self, filename: str):
         self.patients = []

@@ -22,3 +22,23 @@ def world():
     from .world import World
 
     return World.current
+
+
+def constant(*keys) -> int | float | str:
+    """Get a constant from the current simulation."""
+    from .world import World
+
+    obj = World.current.constants
+    for key in keys:
+        obj = obj.get(key, None)
+        if obj is None:
+            raise KeyError(f"Key {key} not found in lookup {keys[:]}")
+
+    if (
+        not isinstance(obj, int)
+        and not isinstance(obj, float)
+        and not isinstance(obj, str)
+    ):
+        raise TypeError(f"{keys[:]} is not a constant!")
+
+    return obj

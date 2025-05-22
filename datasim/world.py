@@ -6,7 +6,9 @@ from os import getpid
 from sys import stdout
 from threading import Thread
 from time import sleep
-from typing import Dict, Final, Optional, Self, Tuple
+from typing import Any, Dict, Final, Optional, Self, Tuple
+
+import yaml
 
 from .entity import Entity
 from .logging import log, LogLevel
@@ -31,6 +33,7 @@ class World(ABC):
     entities: Final[OrderedSet[Entity]]
     _entity_dict: Final[Dict[str, Entity]]
     plots: Final[Dict[str, Plot]]
+    constants: Final[Dict[str, Any]]
     resources: Final[Dict[str, Resource]]
     queues: Final[Dict[str, Queue]]
     quantities: Final[Dict[str, Quantity]]
@@ -42,6 +45,7 @@ class World(ABC):
         tpu: float = 10.0,
         time_unit: str = "seconds",
         headless: bool = False,
+        definition_file: Optional[str] = None,
     ):
         """Create the simulation world.
 
@@ -58,11 +62,26 @@ class World(ABC):
             )
             return
         World.current = self
+
+        definition = None
+
+        if definition_file:
+            definition = yaml.full_load(open(definition_file))
+            if "title" in definition:
+                title = definition["title"]
+            if "tpu" in definition:
+                tpu = definition["tpu"]
+            if "time_unit" in definition:
+                time_unit = definition["time_unit"]
+            if "headless" in definition:
+                headless = definition["headless"]
+
         simulation.active = True
         self.title = title
         self.entities = OrderedSet[Entity]([])
         self._entity_dict = {}
         self.plots = {}
+        self.constants = {}
         self.resources = {}
         self.queues = {}
         self.quantities = {}
@@ -83,6 +102,35 @@ class World(ABC):
         self.headless = headless
         if not headless and not self.dashboard:
             self.dashboard = Dashboard()
+
+        if definition:
+            for constant in definition["constants"]:
+                self.constants.update(constant)
+
+            for resource in definition["resources"]:
+                options = resource.value().get("plot_options", PlotOptions())
+                self.add(
+                    Resource(
+                        resource.key(),
+                        resource.value()["resource_type"],
+                        resource.value().get("slots", 1),
+                        resource.value().get("usage_time", 0),
+                        resource.value().get("max_queue", 0),
+                        resource.value().get("capacity", None),
+                        resource.value().get("start_amount", None),
+                        resource.value().get("auto_plot", True),
+                        resource.value().get("plot_id", ""),
+                        resource.value().get("plot_frequency", 1),
+                        options,
+                    )
+                )
+
+            for queue in definition["queues"]:
+                pass
+            for quantitie in definition["quantities"]:
+                pass
+            for batche in definition["batches"]:
+                pass
 
     @staticmethod
     def reset():

@@ -1,12 +1,5 @@
-from typing import Dict, List, Optional
+from typing import List, Optional
 from datasim import Entity, log, LogLevel, State, UsingResourceState, simulation
-
-
-critical_duration_for_illness: Dict[str, Optional[float]] = {
-    "A": None,
-    "B": 400.0,
-    "C": 200.0,
-}
 
 
 class WaitingPatientState(State):
@@ -16,9 +9,10 @@ class WaitingPatientState(State):
         super().__init__("Waiting for a bed", patient)
         self.patient = patient
 
-        critical_duration = critical_duration_for_illness[self.patient.illness]
+        critical_duration = simulation.constant("critical_time", self.patient.illness)
+
         self.patient.critical_time = (
-            simulation.time + critical_duration if critical_duration else None
+            simulation.time + float(critical_duration) if critical_duration else None
         )
         log(
             f"{self.patient} will be critical at time {self.patient.critical_time}",

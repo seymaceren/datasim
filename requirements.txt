@@ -5,6 +5,7 @@ pytest-cov>=6.0.0
 flake8>=7.2.0
 pyright>=1.1.399
 pydocstyle>=6.3.0
+pyyaml>=6.0.2
 numpy>=2.2.3
 pandas>=2.2.3
 pandas-stubs>=2.2.3

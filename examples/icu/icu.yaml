@@ -1,0 +1,75 @@
+title: ICU
+tpu: 5
+time_unit: hours
+headless: false
+
+batches:
+- single:
+  - beds.slots: 4
+    critical_duration.B: 400
+    critical_duration.C: 200
+  - beds.slots: 7
+    critical_duration.B: 600
+    critical_duration.C: 400
+  - beds.slots: 10
+    critical_duration.B: 300
+    critical_duration.C: 150
+- grid:
+  - beds.slots:
+      range: [2, 20]
+      step: 2
+  - critical_duration.B: [400, 600]
+  - critical_duration.C: [150, 200, 300]
+
+constants:
+  - critical_duration:
+      A: ~
+      B: 400
+      C: 200
+
+resources:
+  - beds:
+      resource_type: beds
+      slots: 5
+      plot_id: ICU
+      plot_options:
+        title: ICU,
+        name: Beds in use,
+        series_color: blue
+        legend_y: beds
+        secondary_y: true
+  - doctors:
+      resource_type: doctors
+      slots: 5
+      plot_id: ICU
+      plot_options:
+        name: Beds in use,
+        series_color: blue
+        legend_y: beds
+        secondary_y: true
+
+queues:
+  - patients_waiting:
+      plot_id: ICU
+      plot_options:
+        name: Patients waiting
+        series_color: orange
+        legend_y: patients
+
+quantities:
+  - patients_treated:
+      quantity_type: patients
+      start_value: 0
+      plot_id: ICU
+      plot_options:
+        name: Patients treated
+        series_color: green
+        legend_y: patients
+  - patients_died:
+      quantity_type: patients
+      start_value: 0
+      plot_id: ICU
+      plot_options:
+        name: Patients died
+        series_color: red
+        legend_y: patients
