@@ -1,10 +1,9 @@
-from typing import Dict, List, Optional, Self, Tuple
+from typing import Dict, Final, List, Optional, Self, Tuple
 
 from .entity import Entity, State
 from .logging import log
 from .queue import Queue
 from .types import LogLevel, Number, PlotOptions, UseResult
-from . import simulation
 
 
 class Resource:
@@ -22,8 +21,9 @@ class Resource:
         to identify the kind of resource, and set a single usage_time if more than 1 tick.
     """
 
-    id: str
-    resource_type: str
+    world: Final
+    id: Final[str]
+    resource_type: Final[str]
     users: List[Entity]
     user_index: Dict[Entity, int]
     slots: int
@@ -36,6 +36,7 @@ class Resource:
 
     def __init__(
         self,
+        world,
         id: str,
         resource_type: str,
         slots: int = 1,
@@ -70,6 +71,7 @@ class Resource:
                 If set to `0`, adds a data point only when the quantity changes. Defaults to `1`.
             plot_title (Optional[str], optional): An optional plot title. Defaults to `None`.
         """
+        self.world = world
         self.id = id
         self.resource_type = resource_type
         self.users = []
@@ -77,15 +79,39 @@ class Resource:
         self.slots = slots
         self.usage_time = usage_time
         self.simple_time_left = []
-        self.queue = Queue[Entity](id, max_queue) if max_queue > 0 else None
+        self.queue = Queue[Entity](world, id, max_queue) if max_queue > 0 else None
         self.capacity = capacity
         self._amount = start_amount
         self.changed_tick = 0
 
-        simulation.world().add(self)
+        self.world.add(self)
 
         if auto_plot:
             self.make_plot(plot_id, plot_frequency, plot_options)
+
+    @staticmethod
+    def from_yaml(world, params: Dict) -> "Resource":
+        id = list(params.keys())
+        if len(id) > 1:
+            raise ValueError(f"Unable to parse yaml: Multiple keys found in {params}")
+
+        id = id[0]
+        params = params[id]
+
+        return Resource(
+            world,
+            id,
+            params["resource_type"],
+            params.get("slots", 1),
+            params.get("usage_time", 0),
+            params.get("max_queue", 0),
+            params.get("capacity", None),
+            params.get("start_amount", None),
+            params.get("auto_plot", True),
+            params.get("plot_id", ""),
+            params.get("plot_frequency", 1),
+            PlotOptions.from_yaml(params.get("plot_options", {})),
+        )
 
     def make_plot(
         self,
@@ -108,9 +134,11 @@ class Resource:
         if plot_options.legend_y == "":
             plot_options.legend_y = self.resource_type
 
-        simulation.world().add_plot(
+        self.world.add_plot(
             plot_id,
-            ResourcePlotData(self.id, self.capacity is None, frequency, plot_options),
+            ResourcePlotData(
+                self.world, self.id, self.capacity is None, frequency, plot_options
+            ),
         )
 
     def _get(self) -> Number:
@@ -118,7 +146,7 @@ class Resource:
 
     def _set(self, amount: int | float):
         self._amount = amount
-        self.changed_tick = simulation.ticks
+        self.changed_tick = self.world.ticks
 
     amount = property(_get, _set, None, """Current amount of the resource.""")
 
@@ -236,7 +264,7 @@ class Resource:
         """Override this function for more complex usage time than a flat number of time units."""
         index = self.user_index[user]
         left = self.simple_time_left[index]
-        left -= simulation.tick_time
+        left -= self.world.tick_time
         if left <= 0:
             self.remove_user(user)
             return False

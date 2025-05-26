@@ -1,11 +1,10 @@
 from abc import ABC
-from typing import Final, Optional, Self
+from typing import Any, Final, Optional, Self
 
 import numpy as np
 
 from .logging import log
 from .types import LogLevel
-from . import simulation
 
 
 class Entity(ABC):
@@ -17,15 +16,18 @@ class Entity(ABC):
     plural: str = "Entities"
 
     registry: Final[dict[type, int]] = {}
-    id: Final[int]
-    name: Final[str]
+
+    world: Any
+    id: Final[str]
+    index: Final[int]
     _state: "State | None" = None
     ticks_in_current_state: int
     location: Optional[np.typing.NDArray[np.float64]]
 
     def __init__(
         self,
-        name: Optional[str] = None,
+        world: Any,
+        id: Optional[str] = None,
         initial_state: Optional["State | type[State]"] = None,
     ):
         """Create an entity.
@@ -36,13 +38,14 @@ class Entity(ABC):
                 that type needs to have a constructor with only name as paramater. Defaults to None,
                 meaning no behavior will be executed.
         """
+        self.world = world
         # Give the entity a serial number
-        self.id = Entity.registry.get(type(self), 0) + 1
-        Entity.registry[type(self)] = self.id
+        self.index = Entity.registry.get(type(self), 0) + 1
+        Entity.registry[type(self)] = self.index
         # Use the serial number as name if no name is given
-        if not name:
-            name = f"{str(type(self))} {self.id:03}"
-        self.name = name
+        if not id:
+            id = f"{str(type(self))} {self.id:03}"
+        self.id = id
         if isinstance(initial_state, State):
             self.state = initial_state
         elif isinstance(initial_state, type):
@@ -54,7 +57,7 @@ class Entity(ABC):
 
         self.ticks_in_current_state = 0
 
-        simulation.world().add(self)
+        self.world.add(self)
 
     def _set_state(self, new_state: "State | type"):
         """Change the state of the entity.
@@ -140,11 +143,7 @@ class Entity(ABC):
 
     def __repr__(self) -> str:
         """Get a string representation of the entity."""
-        return (
-            "Unnamed Entity"
-            if self.name is None
-            else f"{self.__class__.__name__} {self.name}"
-        )
+        return f"{self.__class__.__name__} {self.id}"
 
 
 class State(ABC):

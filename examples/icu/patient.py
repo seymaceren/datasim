@@ -1,5 +1,5 @@
 from typing import List, Optional
-from datasim import Entity, log, LogLevel, State, UsingResourceState, simulation
+from datasim import Entity, log, LogLevel, State, UsingResourceState
 
 
 class WaitingPatientState(State):
@@ -9,10 +9,14 @@ class WaitingPatientState(State):
         super().__init__("Waiting for a bed", patient)
         self.patient = patient
 
-        critical_duration = simulation.constant("critical_time", self.patient.illness)
+        critical_duration = self.patient.world.constant(
+            "critical_duration", self.patient.illness
+        )
 
         self.patient.critical_time = (
-            simulation.time + float(critical_duration) if critical_duration else None
+            self.patient.world.time + float(critical_duration)
+            if critical_duration
+            else None
         )
         log(
             f"{self.patient} will be critical at time {self.patient.critical_time}",
@@ -22,7 +26,7 @@ class WaitingPatientState(State):
     def tick(self):
         if (
             self.patient.critical_time is not None
-            and simulation.time >= self.patient.critical_time
+            and self.patient.world.time >= self.patient.critical_time
         ):
             self.patient.died()
 
@@ -49,11 +53,11 @@ class Patient(Entity):
 
     critical_time: Optional[float] = None
 
-    def __init__(self, name, illness: str, treatment_time: float):
+    def __init__(self, world, name, illness: str, treatment_time: float):
         self.illness = illness
         self.treatment_time = treatment_time
         self.alive = True
-        super().__init__(name, WaitingPatientState)
+        super().__init__(world, name, WaitingPatientState)
 
     def on_state_leaving(self, old_state: State | None, new_state: State | None):
         if (
@@ -62,9 +66,9 @@ class Patient(Entity):
             and old_state.completed
         ):
             log(f"{self} is treated!", LogLevel.debug, "green")
-            simulation.world().remove(self)
+            self.world.remove(self)
 
     def died(self):
         self.alive = False
         log(f"{self} died of illness {self.illness}!", LogLevel.debug, "red")
-        simulation.world().remove(self)
+        self.world.remove(self)

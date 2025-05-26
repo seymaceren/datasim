@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Any, List, Optional
+from typing import Any, Final, List, Optional
 from pandas import DataFrame
 from plotly.graph_objs._figure import Figure
 from plotly.subplots import make_subplots
@@ -14,12 +14,12 @@ from .entity import Entity
 from .queue import Queue
 from .resource import Resource
 from .types import PlotOptions, PlotType
-import datasim.simulation as simulation
 
 
 class PlotData(ABC):
     """Abstract superclass of different types of data to plot."""
 
+    world: Final
     trace: Optional[Figure] = None
     plot: Optional[Any] = None
     plot_index: Optional[int] = 0
@@ -27,6 +27,7 @@ class PlotData(ABC):
 
     def __init__(
         self,
+        world,
         options: PlotOptions = PlotOptions(),
     ):
         """Create a data source to plot from.
@@ -35,6 +36,9 @@ class PlotData(ABC):
             plot_type ("scatter", "line", "bar", "pie"): Type of plot to render.
             title (str, optional): Title to use over the plot. Defaults to None.
         """
+
+        self.world = world
+
         if options.legend_x == "":
             options.legend_x = "x"
         if options.legend_y == "":
@@ -43,7 +47,7 @@ class PlotData(ABC):
             options.plot_type = PlotType.line
         self.options = options
 
-        self._buffer_size = max(10000, simulation.end_tick)
+        self._buffer_size = max(10000, self.world.end_tick)
         self._buffer_index = 0
         self._x_buffer = np.zeros(self._buffer_size)
         self._y_buffer = np.zeros(self._buffer_size)
@@ -259,6 +263,7 @@ class XYPlotData(PlotData):
 
     def __init__(
         self,
+        world,
         data_x: List[float] = [],
         data_y: List[float] = [],
         options: PlotOptions = PlotOptions(),
@@ -271,7 +276,7 @@ class XYPlotData(PlotData):
             plot_type ("scatter", "line", "bar", "pie", optional): Type of plot to show. Defaults to "line".
             title (Optional[str], optional): Title to use over the plot. Defaults to None.
         """
-        super().__init__(options)
+        super().__init__(world, options)
         self._x_buffer[: len(data_x)] = data_x
         self._y_buffer[: len(data_y)] = data_y
 
@@ -298,6 +303,7 @@ class CategoryPlotData(PlotData):
 
     def __init__(
         self,
+        world,
         data_x: List[str] = [],
         data_y: List[float] = [],
         options: PlotOptions = PlotOptions(),
@@ -314,7 +320,7 @@ class CategoryPlotData(PlotData):
             options.legend_x = "category"
         if options.legend_y == "":
             options.legend_y = "value"
-        super().__init__(options)
+        super().__init__(world, options)
         self.data_x = data_x
         self.data_y = data_y
 
@@ -337,6 +343,7 @@ class NPPlotData(PlotData):
 
     def __init__(
         self,
+        world,
         data: np.ndarray,
         options: PlotOptions = PlotOptions(),
     ):
@@ -351,7 +358,7 @@ class NPPlotData(PlotData):
         Raises:
             `TypeError`: When trying to take from a capacity resource without specifying an amount.
         """
-        super().__init__(options)
+        super().__init__(world, options)
         if data.shape[1] != 2:  # TODO add 3 when adding 3D plots
             raise ValueError("")
         self.data = data
@@ -375,6 +382,7 @@ class ResourcePlotData(PlotData):
 
     def __init__(
         self,
+        world,
         source_id: str,
         plot_users: bool = False,
         frequency: int = 1,
@@ -390,22 +398,22 @@ class ResourcePlotData(PlotData):
             title (Optional[str], optional): Title to use over the plot. Defaults to None.
         """
         if options.legend_x == "":
-            options.legend_x = simulation.time_unit
+            options.legend_x = world.time_unit
         if options.legend_y == "":
             options.legend_y = "amount"
-        super().__init__(options)
-        self.source = simulation.world().resource(source_id)
+        super().__init__(world, options)
+        self.source = self.world.resource(source_id)
         self.plot_users = plot_users
         self.frequency = frequency
 
     def _tick(self):
-        if (self.frequency == 0 and self.source.changed_tick == simulation.ticks) or (
-            simulation.ticks % self.frequency == 0
+        if (self.frequency == 0 and self.source.changed_tick == self.world.ticks) or (
+            self.world.ticks % self.frequency == 0
         ):
             if len(self._x_buffer) <= self._buffer_index:
                 self._x_buffer = np.append(self._x_buffer, np.zeros(self._buffer_size))
                 self._y_buffer = np.append(self._y_buffer, np.zeros(self._buffer_size))
-            self._x_buffer[self._buffer_index] = simulation.time
+            self._x_buffer[self._buffer_index] = self.world.time
             self._y_buffer[self._buffer_index] = (
                 len(self.source.users) if self.plot_users else self.source.amount
             )
@@ -420,6 +428,7 @@ class QueuePlotData(PlotData):
 
     def __init__(
         self,
+        world,
         source_id: str,
         frequency: int = 1,
         options: PlotOptions = PlotOptions(),
@@ -434,21 +443,21 @@ class QueuePlotData(PlotData):
             title (Optional[str], optional): Title to use over the plot. Defaults to None.
         """
         if options.legend_x == "":
-            options.legend_x = simulation.time_unit
+            options.legend_x = world.time_unit
         if options.legend_y == "":
             options.legend_y = "length"
-        super().__init__(options)
-        self.source = simulation.world().queue(source_id)
+        super().__init__(world, options)
+        self.source = self.world.queue(source_id)
         self.frequency = frequency
 
     def _tick(self):
-        if (self.frequency == 0 and self.source.changed_tick == simulation.ticks) or (
-            simulation.ticks % self.frequency == 0
+        if (self.frequency == 0 and self.source.changed_tick == self.world.ticks) or (
+            self.world.ticks % self.frequency == 0
         ):
             if len(self._x_buffer) <= self._buffer_index:
                 self._x_buffer = np.append(self._x_buffer, np.zeros(self._buffer_size))
                 self._y_buffer = np.append(self._y_buffer, np.zeros(self._buffer_size))
-            self._x_buffer[self._buffer_index] = simulation.time
+            self._x_buffer[self._buffer_index] = self.world.time
             self._y_buffer[self._buffer_index] = len(self.source)
             self._buffer_index += 1
 
@@ -461,6 +470,7 @@ class StatePlotData(PlotData):
 
     def __init__(
         self,
+        world,
         data: Entity,
         frequency: int = 1,
         options: PlotOptions = PlotOptions(),
@@ -475,12 +485,12 @@ class StatePlotData(PlotData):
             title (Optional[str], optional): Title to use over the plot. Defaults to None.
         """
         if options.legend_x == "":
-            options.legend_x = simulation.time_unit
+            options.legend_x = world.time_unit
         if options.legend_y == "":
             options.legend_y = "state"
         if options.plot_type is None:
             options.plot_type = PlotType.scatter
-        super().__init__(options)
+        super().__init__(world, options)
         self.data = data
         self.frequency = frequency
 
@@ -490,23 +500,25 @@ class StatePlotData(PlotData):
 class Plot:
     """Base class for easily updating data for plots to be made on the dashboard."""
 
-    id: str
+    world: Final
+    id: Final[str]
     title: Optional[str]
     figure: Figure
     data: List[PlotData]
     dashboard: Dashboard
 
-    def __init__(self, id: str, *args: PlotData):
+    def __init__(self, world, id: str, *args: PlotData):
         """Create a plot to add to the dashboard using `World.add_plot()`.
 
         Args:
             id (str): identifier, needs to be unique.
             *args (:class:`PlotData`): Data to start the plot with.
         """
+        self.world = world
         self.id = id
         self.data = []
 
-        dash = simulation.world().dashboard
+        dash = self.world.runner.dashboard
         if dash is None:
             return
         self.dashboard: Dashboard = dash
@@ -546,8 +558,6 @@ class Plot:
         return data.plot_index
 
     def _update(self):
-        self.dashboard.plots.clear()
-
         secondary_y = any([data.options.secondary_y for data in self.data])
 
         for plotdata in self.data:

@@ -1,22 +1,19 @@
 from abc import ABC
-import codecs
 from ordered_set import OrderedSet
 from psutil import Process
 from os import getpid
-from sys import stdout
 from threading import Thread
 from time import sleep
-from typing import Any, Dict, Final, Optional, Self, Tuple
+from typing import Any, Dict, Final, Optional, Tuple
 
-import yaml
-
+from .constant import Constant
 from .entity import Entity
 from .logging import log, LogLevel
 from .plot import Plot, PlotData
 from .quantity import Quantity
 from .queue import Queue
 from .resource import Resource
-import datasim.simulation as simulation
+from .types import Value
 
 
 class World(ABC):
@@ -27,8 +24,8 @@ class World(ABC):
 
     update_time: float | None = 1.0
 
+    runner: Final
     headless: bool
-    current: Self
     title: Final[str]
     entities: Final[OrderedSet[Entity]]
     _entity_dict: Final[Dict[str, Entity]]
@@ -39,13 +36,30 @@ class World(ABC):
     quantities: Final[Dict[str, Quantity]]
     stopped: bool = False
 
+    """Number of ticks elapsed in the current simulation."""
+    ticks: int = 0
+    """Number of time units elapsed in the current simulation."""
+    time: float = 0.0
+    """The maximum number of ticks the simulation will run, if greater than 0."""
+    end_tick: int = 0
+    """Time unit."""
+    time_unit: str = "seconds"
+    """Number of ticks per simulated time unit (or also real time if running in realtime mode)."""
+    tpu: float = 10.0
+    """Number of simulated time units per tick (or also real time if running in realtime mode)."""
+    tick_time: float = 0.1
+
+    """Checks if the simulation is active."""
+    active: bool = False
+
     def __init__(
         self,
+        runner,
         title: str = "Unnamed Simulation",
         tpu: float = 10.0,
         time_unit: str = "seconds",
         headless: bool = False,
-        definition_file: Optional[str] = None,
+        definition: Optional[Dict] = None,
     ):
         """Create the simulation world.
 
@@ -54,19 +68,17 @@ class World(ABC):
             tps (float, optional): Ticks per second (only in simulation time,
                 unless running :meth:`simulate()` with `realtime=True`). Defaults to 10.0.
         """
-        if simulation.active:
+        self.runner = runner
+
+        if self.active:
             log(
                 "(Warning: Not launching another instance)",
                 LogLevel.warning,
                 include_timestamp=False,
             )
             return
-        World.current = self
 
-        definition = None
-
-        if definition_file:
-            definition = yaml.full_load(open(definition_file))
+        if definition:
             if "title" in definition:
                 title = definition["title"]
             if "tpu" in definition:
@@ -76,7 +88,7 @@ class World(ABC):
             if "headless" in definition:
                 headless = definition["headless"]
 
-        simulation.active = True
+        self.active = True
         self.title = title
         self.entities = OrderedSet[Entity]([])
         self._entity_dict = {}
@@ -85,73 +97,55 @@ class World(ABC):
         self.resources = {}
         self.queues = {}
         self.quantities = {}
-        from datasim import Dashboard
 
-        self.dashboard: Optional[Dashboard] = None
         self.ended: bool = False
-        simulation.tpu = tpu
-        simulation.time_unit = time_unit
-
-        stdout.reconfigure(encoding="utf-8")  # type: ignore
-        log(
-            codecs.open("header", "r", "utf-8").read(),
-            LogLevel.error,
-            include_timestamp=False,
-        )  # Draw terminal logo
+        self.tpu = tpu
+        self.time_unit = time_unit
 
         self.headless = headless
-        if not headless and not self.dashboard:
-            self.dashboard = Dashboard()
 
         if definition:
-            for constant in definition["constants"]:
-                self.constants.update(constant)
+            if "constants" in definition:
+                for constant in definition["constants"]:
+                    Constant.from_yaml(self, constant)
 
-            for resource in definition["resources"]:
-                options = resource.value().get("plot_options", PlotOptions())
-                self.add(
-                    Resource(
-                        resource.key(),
-                        resource.value()["resource_type"],
-                        resource.value().get("slots", 1),
-                        resource.value().get("usage_time", 0),
-                        resource.value().get("max_queue", 0),
-                        resource.value().get("capacity", None),
-                        resource.value().get("start_amount", None),
-                        resource.value().get("auto_plot", True),
-                        resource.value().get("plot_id", ""),
-                        resource.value().get("plot_frequency", 1),
-                        options,
-                    )
-                )
+            if "resources" in definition:
+                for resource in definition["resources"]:
+                    Resource.from_yaml(self, resource)
 
-            for queue in definition["queues"]:
-                pass
-            for quantitie in definition["quantities"]:
-                pass
-            for batche in definition["batches"]:
-                pass
+            if "queues" in definition:
+                for queue in definition["queues"]:
+                    Queue.from_yaml(self, queue)
 
-    @staticmethod
-    def reset():
+            if "quantities" in definition:
+                for quantity in definition["quantities"]:
+                    Quantity.from_yaml(self, quantity)
+
+    def reset(self):
         """Reset the World so you can start a different simulation."""
-        simulation.active = False
+        self.active = False
 
-    def add(self, obj: Entity | Resource | Queue | Quantity):
+    def add(self, obj: Constant | Entity | Resource | Queue | Quantity):
         """Add an entity to this :class:`World`.
 
         Args:
             obj (:class:`Entity` | :class:`Resource` | (:class:`Queue`): The entity, resource or queue to add.
         """
-        if isinstance(obj, Entity):
-            if obj.name in self._entity_dict:
-                if obj != self._entity_dict[obj.name]:
-                    raise ValueError(
-                        f"Another entity with name {obj.name} already exists!"
-                    )
-                return
+        try:
+            other = self.__getattribute__(obj.id)
+        except Exception:
+            other = None
+        if other:
+            if obj != other:
+                raise ValueError(f"Another object with id {obj.id} already exists!")
+            return
+        self.__setattr__(obj.id, obj)
+
+        if isinstance(obj, Constant):
+            self.constants[obj.id] = obj
+        elif isinstance(obj, Entity):
             self.entities.append(obj)
-            self._entity_dict[obj.name] = obj
+            self._entity_dict[obj.id] = obj
         elif isinstance(obj, Resource):
             self.resources[obj.id] = obj
         elif isinstance(obj, Queue):
@@ -159,7 +153,7 @@ class World(ABC):
         elif isinstance(obj, Quantity):
             self.quantities[obj.id] = obj
 
-    def remove(self, obj: Entity | Resource | Queue | Quantity) -> bool:
+    def remove(self, obj: Constant | Entity | Resource | Queue | Quantity) -> bool:
         """Remove an entity from this :class:`World`.
 
         Args:
@@ -169,7 +163,11 @@ class World(ABC):
             bool: `True` if the entity was succesfully removed.
         """
         try:
-            if isinstance(obj, Entity):
+            self.__delattr__(obj.id)
+
+            if isinstance(obj, Constant):
+                self.constants.pop(obj.id)
+            elif isinstance(obj, Entity):
                 self.entities.remove(obj)
             elif isinstance(obj, Resource):
                 self.resources.pop(obj.id)
@@ -177,9 +175,37 @@ class World(ABC):
                 self.queues.pop(obj.id)
             elif isinstance(obj, Quantity):
                 self.quantities.pop(obj.id)
-        except ValueError:
+        except Exception:
             return False
         return True
+
+    def set_variation(self, selector: str, value: Value):
+        obj_path = selector.split(".")
+        current = self
+        for path_part in obj_path[:-1]:
+            current = getattr(current, path_part)
+
+        destination = getattr(current, obj_path[-1])
+
+        if (
+            destination is None
+            or isinstance(destination, int)
+            or isinstance(destination, float)
+            or isinstance(destination, str)
+        ):
+            setattr(current, obj_path[-1], value)
+        elif isinstance(destination, Constant):
+            destination.value = value
+
+    def constant(self, *keys) -> Value:
+        """Get a constant from the current simulation."""
+        key = ":".join(keys)
+        constant = self.constants.get(
+            key, KeyError(f"No constant with id '{key}' found!")
+        )
+        if isinstance(constant, KeyError):
+            raise constant
+        return constant
 
     def entity(self, key: str) -> Entity:
         """Get a Resource by id."""
@@ -232,16 +258,15 @@ class World(ABC):
             return False
 
         if tpu > 0.0:
-            simulation.tpu = tpu
-        simulation.ticks = 0
-        simulation.time = 0.0
-        simulation.tick_time = 1.0 / simulation.tpu
-        simulation.end_tick = end_tick
+            self.tpu = tpu
+        self.ticks = 0
+        self.time = 0.0
+        self.tick_time = 1.0 / self.tpu
+        self.end_tick = end_tick
         self.realtime = realtime
         self.stop_server = stop_server
         self.sim_thread = Thread(target=self._simulation_thread)
         self.sim_thread.start()
-        self.sim_thread.join()
         return True
 
     def stop(self):
@@ -265,41 +290,31 @@ class World(ABC):
         pass
 
     def _simulation_thread(self):
-        log(
-            f"\n▟{"▀"*(4+len(self.title))}▜▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▙\n"
-            + f"█  {self.title}  ▐  Starting simulation  █\n"
-            + f"▜{"▄"*(4+len(self.title))}▟▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▛\n",
-            LogLevel.debug,
-            include_timestamp=False,
-        )
-        if simulation.end_tick > 0:
+        if self.end_tick > 0:
             log(
-                f"{self.title}: Run for {simulation.end_tick / simulation.tpu} {simulation.time_unit}"
-                + f" ({simulation.end_tick} ticks at {simulation.tpu} ticks/{simulation.time_unit})...",
+                f"{self.title}: Run for {self.end_tick / self.tpu} {self.time_unit}"
+                + f" ({self.end_tick} ticks at {self.tpu} ticks/{self.time_unit})...",
                 LogLevel.debug,
                 include_timestamp=False,
             )
         else:
             log(
-                f"{self.title}: Running indefinitely at {simulation.tpu} ticks/{simulation.time_unit})...",
+                f"{self.title}: Running indefinitely at {self.tpu} ticks/{self.time_unit})...",
                 LogLevel.debug,
                 include_timestamp=False,
             )
 
-        if self.realtime and simulation.time_unit != "seconds":
+        if self.realtime and self.time_unit != "seconds":
             log(
                 "Warning: Running realtime only works with seconds as time unit:\n"
-                + f"Simulation timing will use seconds instead of {simulation.time_unit}!",
+                + f"Simulation timing will use seconds instead of {self.time_unit}!",
                 LogLevel.warning,
                 include_timestamp=False,
             )
 
         self.last_update = 0
 
-        while (
-            simulation.end_tick == 0 or simulation.ticks < simulation.end_tick
-        ) and not self.stopped:
-
+        while (self.end_tick == 0 or self.ticks < self.end_tick) and not self.stopped:
             self.before_entities_update()
 
             for entity in self.entities:
@@ -309,14 +324,13 @@ class World(ABC):
 
             self.after_entities_update()
 
-            if self.dashboard:
-                for plot in self.plots.values():
-                    plot._tick()
+            for plot in self.plots.values():
+                plot._tick()
 
-            simulation.ticks += 1
-            simulation.time = simulation.ticks / simulation.tpu
+            self.ticks += 1
+            self.time = self.ticks / self.tpu
             if self.realtime:
-                sleep(simulation.tick_time)
+                sleep(self.tick_time)
 
         self.ended = True
         log(
@@ -337,18 +351,14 @@ class World(ABC):
             p.terminate()
 
     def _draw(self):
-        if self.dashboard:
-            self.dashboard._draw()
-
-    def _update_plots(self):
         for plot in self.plots.values():
             plot._update()
 
     def add_plot(self, plot_id: str, data: PlotData) -> Tuple[Plot, int]:
-        """Add a plot to the dashboard."""
+        """Add a plot to the world: collects data, and plots if dashboard is present."""
         index = 0
         if plot_id not in self.plots:
-            self.plots[plot_id] = Plot(plot_id, data)
+            self.plots[plot_id] = Plot(self, plot_id, data)
         else:
             index = self.plots[plot_id].add_trace(data)
 

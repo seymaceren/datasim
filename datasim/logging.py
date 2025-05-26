@@ -1,7 +1,6 @@
 from colors import color
 from typing import Optional
 
-from . import simulation
 from .types import LogLevel
 
 
@@ -14,6 +13,7 @@ def log(
     fg_color: Optional[int | str] = None,
     bg_color: Optional[int | str] = None,
     style: Optional[str] = None,
+    world=None,
     include_timestamp: bool = True,
 ):
     """Print a log message if the log level is set at least as high as the message.
@@ -29,7 +29,11 @@ def log(
     if level >= log_level:
         print(
             color(
-                f"[{simulation.time}] {message}" if include_timestamp else message,
+                (
+                    f"[{world.time}] {message}"
+                    if world and include_timestamp
+                    else message
+                ),
                 fg=fg_color,
                 bg=bg_color,
                 style=style,

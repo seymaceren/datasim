@@ -1,25 +1,30 @@
-import csv
-import os
-from typing import List, Self
+from csv import reader
+from typing import Dict, List, Optional
 
-from datasim import Quantity, Queue, Resource, simulation, World
+from datasim import Quantity, Queue, Resource, World
 from .patient import PatientData, Patient
 
 
 class ICU(World):
     patients: List[PatientData]
+
+    # You can define the types of objects loaded from YAML as attributes to get type checking
+    # and IDE completion and such.
     beds: Resource
     patients_waiting: Queue[Patient]
     patients_treated: Quantity
     patients_died: Quantity
-    icu: Self
 
-    def __init__(self, headless: bool = False):
+    def __init__(
+        self,
+        runner,
+        headless: bool = False,
+        definition: Optional[Dict] = None,
+    ):
         super().__init__(
-            definition_file=os.path.join(
-                os.path.abspath(os.path.dirname(__file__)), "icu.yaml"
-            ),
+            runner=runner,
             headless=headless,
+            definition=definition,
         )
         ICU.icu = self
 
@@ -27,7 +32,7 @@ class ICU(World):
 
     def load_patient_data(self, filename: str):
         self.patients = []
-        for row in list(csv.reader(open(filename)))[1:]:
+        for row in list(reader(open(filename)))[1:]:
             self.patients.append(PatientData(row))
 
     def remove(self, obj):
@@ -39,10 +44,10 @@ class ICU(World):
         return super().remove(obj)
 
     def before_entities_update(self):
-        while len(self.patients) > 0 and self.patients[0].enter_time <= simulation.time:
+        while len(self.patients) > 0 and self.patients[0].enter_time <= self.time:
             patient = self.patients.pop(0)
             self.patients_waiting.enqueue(
-                Patient(patient.id, patient.illness, patient.treatment_time)
+                Patient(self, patient.id, patient.illness, patient.treatment_time)
             )
 
         # We don't want our patients to look for beds themselves but in order of arrival.

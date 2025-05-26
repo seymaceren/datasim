@@ -1,15 +1,15 @@
-from typing import List, Self, Tuple
+from typing import Dict, Final, List, Self, Tuple
 
 from .plot import PlotOptions, XYPlotData
 from .types import Number
-from . import simulation
 
 
 class Quantity:
     """Representation of a custom quantity that can be automatically plotted and exported."""
 
+    world: Final
     """Unique identifier of the quantity."""
-    id: str
+    id: Final[str]
     """Descriptive type of things or unit of the quantity, used as plot axis legend."""
     quantity_type: str
     """Optional minimum value of the quantity."""
@@ -22,6 +22,7 @@ class Quantity:
 
     def __init__(
         self,
+        world,
         id: str,
         quantity_type: str,
         start_value: Number = None,
@@ -50,6 +51,7 @@ class Quantity:
                 If set to `0`, adds a data point only when the quantity changes. Defaults to `0`.
             plot_title (Optional[str], optional): An optional plot title. Defaults to `None`.
         """
+        self.world = world
         self.id = id
         self.quantity_type = quantity_type
         self._plots = []
@@ -57,10 +59,32 @@ class Quantity:
         self.max = max
         self._value = start_value
 
-        simulation.world().add(self)
+        self.world.add(self)
 
         if auto_plot:
             self.make_plot(plot_id, plot_frequency, plot_options)
+
+    @staticmethod
+    def from_yaml(world, params: Dict) -> "Quantity":
+        id = list(params.keys())
+        if len(id) > 1:
+            raise ValueError(f"Unable to parse yaml: Multiple keys found in {params}")
+
+        id = id[0]
+        params = params[id]
+
+        return Quantity(
+            world,
+            id,
+            params["quantity_type"],
+            params.get("start_value", None),
+            params.get("min", None),
+            params.get("max", None),
+            params.get("auto_plot", True),
+            params.get("plot_id", ""),
+            params.get("plot_frequency", 1),
+            PlotOptions.from_yaml(params.get("plot_options", {})),
+        )
 
     def make_plot(
         self,
@@ -79,7 +103,7 @@ class Quantity:
             plot_id = self.id
 
         if plot_options.legend_x == "":
-            plot_options.legend_x = simulation.time_unit
+            plot_options.legend_x = self.world.time_unit
         if plot_options.legend_y == "":
             plot_options.legend_y = self.quantity_type
 
@@ -88,17 +112,17 @@ class Quantity:
         if self._value:
             x.append(0.0)
             y.append(self._value)
-        data = XYPlotData(x, y, plot_options)
+        data = XYPlotData(self.world, x, y, plot_options)
 
         self._plots.append((frequency, data))
 
-        simulation.world().add_plot(plot_id, data)
+        self.world.add_plot(plot_id, data)
 
     def _tick(self):
         if self._value:
             for index, (frequency, data) in enumerate(self._plots):
-                if simulation.ticks % frequency == 0:
-                    data.append(simulation.time, self._value)
+                if self.world.ticks % frequency == 0:
+                    data.append(self.world.time, self._value)
 
     def _get(self) -> Number:
         return self._value
@@ -113,7 +137,7 @@ class Quantity:
         self._value = value
         for frequency, data in self._plots:
             if frequency == 0:
-                data.append(simulation.time, self._value)
+                data.append(self.world.time, self._value)
 
     value = property(_get, _set, None, """Current value of the quantity.""")
 

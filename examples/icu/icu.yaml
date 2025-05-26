@@ -6,20 +6,20 @@ headless: false
 batches:
 - single:
   - beds.slots: 4
-    critical_duration.B: 400
-    critical_duration.C: 200
+    critical_duration:B: 400
+    critical_duration:C: 200
   - beds.slots: 7
-    critical_duration.B: 600
-    critical_duration.C: 400
+    critical_duration:B: 600
+    critical_duration:C: 400
   - beds.slots: 10
-    critical_duration.B: 300
-    critical_duration.C: 150
-- grid:
-  - beds.slots:
-      range: [2, 20]
-      step: 2
-  - critical_duration.B: [400, 600]
-  - critical_duration.C: [150, 200, 300]
+    critical_duration:B: 300
+    critical_duration:C: 150
+# - grid:
+#   - beds.slots:
+#       range: [2, 20]
+#       step: 2
+#     critical_duration:B: [400, 600]
+#     critical_duration:C: [150, 200, 300]
 
 constants:
   - critical_duration:
@@ -33,19 +33,19 @@ resources:
       slots: 5
       plot_id: ICU
       plot_options:
-        title: ICU,
-        name: Beds in use,
+        title: ICU
+        name: Beds in use
         series_color: blue
-        legend_y: beds
+        legend_y: beds-doctors
         secondary_y: true
   - doctors:
       resource_type: doctors
       slots: 5
       plot_id: ICU
       plot_options:
-        name: Beds in use,
-        series_color: blue
-        legend_y: beds
+        name: Doctors active
+        series_color: magenta
+        legend_y: beds-doctors
         secondary_y: true
 
 queues:

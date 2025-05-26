@@ -1,8 +1,9 @@
 from enum import Enum, IntEnum
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 
 Number = int | float | None
+Value = str | Number
 
 
 class LogLevel(IntEnum):
@@ -241,6 +242,18 @@ class PlotOptions:
         self.trendline_options = trendline_options
         self.trendline_scope = trendline_scope
         self.trendline_color_override = trendline_color_override
+
+    @staticmethod
+    def from_yaml(params: Dict) -> "PlotOptions":
+        if "series_color" in params:
+            if "color_discrete_sequence" not in params:
+                params["color_discrete_sequence"] = [params["series_color"]]
+            del params["series_color"]
+        options = PlotOptions()
+        for key in params:
+            options.__setattr__(key, params[key])
+
+        return options
 
 
 class UseResult(Enum):

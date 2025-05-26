@@ -1,9 +1,8 @@
-from typing import Final, Generic, List, Tuple, TypeVar
+from typing import Dict, Final, Generic, List, Tuple, TypeVar
 
 from .entity import Entity
 from .logging import log
 from .types import LogLevel, Number, PlotOptions
-from . import simulation
 
 EntityType = TypeVar("EntityType", bound=Entity)
 
@@ -11,6 +10,7 @@ EntityType = TypeVar("EntityType", bound=Entity)
 class Queue(Generic[EntityType]):
     """A queue for entities to wait for resource availability."""
 
+    world: Final
     id: Final[str]
     queue: Final[List[Tuple[EntityType, Number]]]
     capacity: int
@@ -18,6 +18,7 @@ class Queue(Generic[EntityType]):
 
     def __init__(
         self,
+        world,
         id: str,
         capacity: int = 0,
         auto_plot: bool = True,
@@ -37,14 +38,34 @@ class Queue(Generic[EntityType]):
             plot_title (Optional[str], optional): An optional plot title. Defaults to `None`.
         """
         self.id = id
+        self.world = world
         self.capacity = capacity
         self.queue = []
         self.changed_tick = 0
 
-        simulation.world().add(self)
+        self.world.add(self)
 
         if auto_plot:
             self.make_plot(plot_id, plot_frequency, plot_options)
+
+    @staticmethod
+    def from_yaml(world, params: Dict) -> "Queue":
+        id = list(params.keys())
+        if len(id) > 1:
+            raise ValueError(f"Unable to parse yaml: Multiple keys found in {params}")
+
+        id = id[0]
+        params = params[id]
+
+        return Queue(
+            world,
+            id,
+            params.get("capacity", 0),
+            params.get("auto_plot", True),
+            params.get("plot_id", ""),
+            params.get("plot_frequency", 1),
+            PlotOptions.from_yaml(params.get("plot_options", {})),
+        )
 
     @property
     def full(self) -> bool:
@@ -77,8 +98,8 @@ class Queue(Generic[EntityType]):
         if plot_id == "":
             plot_id = self.id
 
-        self.plot = QueuePlotData(self.id, frequency, plot_options)
-        simulation.world().add_plot(plot_id, self.plot)
+        self.plot = QueuePlotData(self.world, self.id, frequency, plot_options)
+        self.world.add_plot(plot_id, self.plot)
 
     def enqueue(self, entity: EntityType, amount: Number = None) -> bool:
         """Put an entity at the end of the queue.
@@ -104,7 +125,7 @@ class Queue(Generic[EntityType]):
             )
 
             self.queue.insert(0, (entity, amount))
-            self.changed_tick = simulation.ticks
+            self.changed_tick = self.world.ticks
 
             return True
 
@@ -120,7 +141,7 @@ class Queue(Generic[EntityType]):
             return None
 
         (e, a) = self.queue.pop()
-        self.changed_tick = simulation.ticks
+        self.changed_tick = self.world.ticks
 
         log(
             f"{e} left {self}",
@@ -169,7 +190,7 @@ class Queue(Generic[EntityType]):
         ][0]
         if self.queue.remove(entry):
             self.queue.append(entry)
-            self.changed_tick = simulation.ticks
+            self.changed_tick = self.world.ticks
             return True
 
         return False

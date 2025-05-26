@@ -1,29 +1,55 @@
-import sys
+from importlib import import_module
+from sys import argv
 import streamlit as st
 
-from datasim import logging, LogLevel, simulation
-
-# Use this line to specify your main world class
-from examples.icu.icu import ICU as MainWorldClass
+from datasim import logging, LogLevel, Runner
 
 
-if "streamlit" in sys.argv:
+world_class = None
+for arg in argv:
+    if arg.startswith("world="):
+        world_class = arg[6:]
+
+
+if not world_class:
+    raise SyntaxError(
+        "No valid world class specified. Add 'world=<classname>' to your command line to specify the main World class."
+    )
+
+split = world_class.rfind(".")
+
+world_class_module = import_module(world_class[:split])
+
+if not world_class_module:
+    raise SyntaxError(f"World class '{world_class}' not found!")
+
+split += 1
+try:
+    world_class_object = getattr(world_class_module, world_class[split:])
+except Exception:
+    raise SyntaxError(
+        f"World class '{world_class[split:]}' not found in module '{world_class_module}'!"
+    )
+
+if "-v" in argv:
+    logging.level = LogLevel.verbose
+elif "-d" in argv:
     logging.level = LogLevel.debug
 
-    if "world" not in st.session_state:
-        if simulation.active:
-            st.session_state.world = simulation.world()
-        else:
-            profiling = True
-            st.session_state.world = MainWorldClass()
 
-    if type(st.session_state.world) is MainWorldClass:
-        st.session_state.world.simulate(stop_server=False)
+if "streamlit" in argv:
+    if "runner" not in st.session_state:
+        st.session_state.update_time = 1.0
+        st.session_state.runner = Runner(world_class_object)
 
-    from datasim.streamlit_update import draw_dashboard
+    any_active = st.session_state.runner.simulate(stop_server=False)
 
-    draw_dashboard()
+    if not any_active:
+        st.session_state.update_time = None
+    else:
+        from datasim.streamlit_update import draw_dashboard
+
+        draw_dashboard()
 
 else:
-    logging.level = LogLevel.verbose
-    MainWorldClass(headless=True).simulate()
+    Runner(world_class_object, headless=True).simulate()
