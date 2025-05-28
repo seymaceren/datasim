@@ -2,7 +2,7 @@ from csv import reader
 from typing import Dict, List, Optional
 
 from datasim import Quantity, Queue, Resource, World
-from .patient import PatientData, Patient
+from .patient import DiedPatientState, PatientData, Patient, TreatedPatientState
 
 
 class ICU(World):
@@ -20,11 +20,10 @@ class ICU(World):
         runner,
         headless: bool = False,
         definition: Optional[Dict] = None,
+        variation: Optional[str] = None,
     ):
         super().__init__(
-            runner=runner,
-            headless=headless,
-            definition=definition,
+            runner=runner, headless=headless, definition=definition, variation=variation
         )
         ICU.icu = self
 
@@ -37,7 +36,7 @@ class ICU(World):
 
     def remove(self, obj):
         if isinstance(obj, Patient):
-            if obj.alive:
+            if obj.state == TreatedPatientState:
                 self.patients_treated += 1
             else:
                 self.patients_died += 1
@@ -53,7 +52,7 @@ class ICU(World):
         # We don't want our patients to look for beds themselves but in order of arrival.
         next = self.patients_waiting.peek()
         while next is not None and not self.beds.occupied:
-            if not next.alive:
+            if next.state == DiedPatientState:
                 self.patients_waiting.dequeue()
             else:
                 self.beds.try_use(

@@ -4,7 +4,7 @@ from typing import Any, Final, Optional, Self
 import numpy as np
 
 from .logging import log
-from .types import LogLevel
+from .types import LogLevel, PlotOptions, PlotType
 
 
 class Entity(ABC):
@@ -29,6 +29,9 @@ class Entity(ABC):
         world: Any,
         id: Optional[str] = None,
         initial_state: Optional["State | type[State]"] = None,
+        auto_plot: bool = False,
+        plot_id: str = "",
+        plot_options: PlotOptions = PlotOptions(),
     ):
         """Create an entity.
 
@@ -57,9 +60,55 @@ class Entity(ABC):
 
         self.ticks_in_current_state = 0
 
+        if auto_plot:
+            self.make_plot(plot_id, plot_options)
+
         self.world.add(self)
 
-    def _set_state(self, new_state: "State | type"):
+    def make_plot(
+        self,
+        plot_id: str = "",
+        plot_options: PlotOptions = PlotOptions(),
+    ):
+        """Create a plot for this Resource. Also automatically used when `auto_plot` is True at creation.
+
+        Args:
+            plot_type (PlotType, optional): The type of plot to add. Defaults to PlotType.line.
+            frequency (int, optional): Plot every x ticks or only on change if set to 0. Defaults to 0.
+            plot_title (Optional[str], optional): Optional title for the plot. Defaults to None.
+        """
+        from .plot import StatePlotData
+
+        plot_options.plot_type = PlotType.pie
+
+        if plot_id == "":
+            plot_id = self.id
+
+        if plot_options.legend_y == "":
+            plot_options.legend_y = "state"
+
+        self.world.add_plot(
+            plot_id,
+            StatePlotData(self.world, self, 1, plot_options),
+        )
+
+    def _bind_state(self, new_state: "State | type | None") -> "State | None":
+        if new_state is None:
+            return None
+        if isinstance(new_state, type):
+            new_state = new_state(f"{self}{type.__name__}", self)
+        if not isinstance(new_state, State):
+            raise TypeError(
+                f"Given type {new_state.__class__.__name__} is not a subclass of State!"
+            )
+        if new_state.entity is None:
+            new_state.entity = self
+        elif new_state.entity != self:
+            raise ValueError(f"{new_state} already belongs to {new_state.entity}!")
+
+        return new_state
+
+    def _set_state(self, new_state: "State | type | None"):
         """Change the state of the entity.
 
         The new behavior will be executed starting at the next tick.
@@ -72,15 +121,7 @@ class Entity(ABC):
         Raises:
             TypeError: If the provided type is not a subclass of :class:`State`.
         """
-        if isinstance(new_state, type):
-            new_state = new_state(f"{self}{type.__name__}", self)
-        if not isinstance(new_state, State):
-            raise TypeError(
-                f"Given type {new_state.__class__.__name__} is not a subclass of State!"
-            )
-        if new_state.entity is not None and new_state.entity != self:
-            raise ValueError(f"{new_state} already belongs to {new_state.entity}!")
-        new_state.entity = self
+        new_state = self._bind_state(new_state)
 
         if self._state:
             self._state.switch_to = new_state
@@ -100,17 +141,23 @@ class Entity(ABC):
                 self._change_state(self._state.switch_to)
             if self._state:
                 self._state.tick()
+        self.ticks_in_current_state += 1
 
     def _change_state(self, new_state: "State | None"):
         if self._state == new_state:
             return
 
+        if self._state:
+            new_state = self._bind_state(self.on_state_leaving(self._state, new_state))
+
         log(
             f"{self}: {self._state.__class__.__name__} >> {new_state.__class__.__name__}",
             LogLevel.verbose,
+            world=self.world,
         )
-        if self._state:
-            self.on_state_leaving(self._state, new_state)
+
+        self.changed_tick = self.world.ticks
+
         self._state = new_state
         if self._state:
             self._state.switch_to = self._state
@@ -119,23 +166,32 @@ class Entity(ABC):
 
         self.ticks_in_current_state = 0
 
+    def remove(self):
+        self.world.remove(self)
+
     def on_state_entered(self, old_state: "State | None", new_state: "State | None"):
         """Implement this function to run when the state starts.
 
         Args:
-            old_state (State or None): The current state that is being left.
-            new_state (State or None): The state that will replace the current state.
+            old_state (State or None): The state that the current state has replaced.
+            new_state (State or None): The current state that is being started.
         """
         pass
 
-    def on_state_leaving(self, old_state: "State | None", new_state: "State | None"):
+    def on_state_leaving(
+        self, old_state: "State | None", new_state: "State | None"
+    ) -> "State | type | None":
         """Implement this function to run when the current state is being left.
+        Can be used (carefully) to override the new state to enter.
 
         Args:
             old_state (State or None): The state that was left.
             new_state (State or None): The new and current state.
+        Returns:
+            (State or None): The new state to enter. Make sure to return `new_state`
+            or the result of the superclass function when you override this.
         """
-        pass
+        return new_state
 
     def __str__(self) -> str:
         """Get a string representation of the entity."""
@@ -157,7 +213,12 @@ class State(ABC):
     completed: bool | None
     switch_to: Self | None
 
-    def __init__(self, name: str, entity: Entity, completion: bool | None = None):
+    def __init__(
+        self,
+        name: str,
+        entity: Entity,
+        completion: bool | None = None,
+    ):
         """Create a state object.
 
         Args:
@@ -185,3 +246,6 @@ class State(ABC):
         """Implement this function to have the state execute any behavior \
             for its entity."""
         pass
+
+    def __eq__(self, object):
+        return self is object or (isinstance(object, type) and isinstance(self, object))

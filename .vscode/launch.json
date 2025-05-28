@@ -21,6 +21,7 @@
       "request": "launch",
       "program": "sim_main.py",
       "args": [
+        "-v",
         "world=examples.icu.icu.ICU"
       ],
       "cwd": "${workspaceFolder}",

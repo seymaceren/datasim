@@ -122,6 +122,7 @@ class Queue(Generic[EntityType]):
                 f"{entity} joining {self}",
                 LogLevel.verbose,
                 45,
+                world=self.world,
             )
 
             self.queue.insert(0, (entity, amount))

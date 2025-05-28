@@ -36,17 +36,17 @@ resources:
         title: ICU
         name: Beds in use
         series_color: blue
-        legend_y: beds-doctors
+        legend_y: beds
         secondary_y: true
-  - doctors:
-      resource_type: doctors
-      slots: 5
-      plot_id: ICU
-      plot_options:
-        name: Doctors active
-        series_color: magenta
-        legend_y: beds-doctors
-        secondary_y: true
+  # - doctors:
+  #     resource_type: doctors
+  #     slots: 5
+  #     plot_id: ICU
+  #     plot_options:
+  #       name: Doctors active
+  #       series_color: magenta
+  #       legend_y: doctors
+  #       secondary_y: true
 
 queues:
   - patients_waiting:

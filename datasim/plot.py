@@ -489,12 +489,24 @@ class StatePlotData(PlotData):
         if options.legend_y == "":
             options.legend_y = "state"
         if options.plot_type is None:
-            options.plot_type = PlotType.scatter
+            options.plot_type = PlotType.pie
         super().__init__(world, options)
         self.data = data
         self.frequency = frequency
+        self._y_buffer = np.full(self._buffer_size, "")
 
-        # TODO
+    def _tick(self):
+        if (self.frequency == 0 and self.data.ticks_in_current_state == 1) or (
+            self.world.ticks % self.frequency == 0
+        ):
+            if len(self._x_buffer) <= self._buffer_index:
+                self._x_buffer = np.append(self._x_buffer, np.zeros(self._buffer_size))
+                self._y_buffer = np.append(
+                    self._y_buffer, np.full(self._buffer_size, "")
+                )
+            self._x_buffer[self._buffer_index] = self.world.time
+            self._y_buffer[self._buffer_index] = self.data.state.name
+            self._buffer_index += 1
 
 
 class Plot:
@@ -562,23 +574,41 @@ class Plot:
 
         for plotdata in self.data:
             plotdata._update_trace()
-            if secondary_y and plotdata.plot and plotdata.trace:
-                if plotdata.plot.id not in self.dashboard.plots:
-                    self.dashboard.plots[plotdata.plot.id] = make_subplots(
-                        specs=[[{"secondary_y": True}]]
+            if plotdata.plot and plotdata.trace:
+                if self.id not in self.dashboard.plots:
+                    self.dashboard.plots[self.id] = make_subplots(
+                        specs=[[{"secondary_y": secondary_y}]]
                     )
-                    self.dashboard.plots[plotdata.plot.id].layout.xaxis.title = (  # type: ignore
+                    self.dashboard.plots[self.id].layout.xaxis.title = (  # type: ignore
                         plotdata.options.legend_x
                     )
 
+        self.dashboard.dataframes[self.id] = DataFrame()
+        self.dashboard.dataframe_names[self.id] = (
+            self.world.title + f" - {self.world.variation}"
+            if self.world.variation
+            else ""
+        )
+
         for plotdata in self.data:
+            plotdata._data_frame
             if plotdata.plot and plotdata.trace:
                 for data in plotdata.trace["data"]:
                     data["showlegend"] = True  # type: ignore
                     data["name"] = plotdata.options.name  # type: ignore
-                    self.dashboard.plots[plotdata.plot.id].add_traces([data])
+                    self.dashboard.plots[self.id].add_traces([data])
+
+                    dataframe = plotdata._data_frame.copy()
+                    dataframe.columns = [self.world.time_unit, plotdata.options.name]
+                    if self.dashboard.dataframes[self.id].empty:
+                        self.dashboard.dataframes[self.id] = dataframe
+                    else:
+                        self.dashboard.dataframes[self.id] = self.dashboard.dataframes[
+                            self.id
+                        ].merge(dataframe, on=self.world.time_unit, how="outer")
+
                     if plotdata.options.secondary_y:
-                        self.dashboard.plots[plotdata.plot.id].layout.yaxis2.title = (  # type: ignore
+                        self.dashboard.plots[self.id].layout.yaxis2.title = (  # type: ignore
                             plotdata.options.legend_y
                         )
                         if isinstance(plotdata.options.color_discrete_sequence, list):
@@ -589,10 +619,10 @@ class Plot:
                                 r, g, b = rgb.red, rgb.green, rgb.blue
                             else:
                                 (r, g, b) = unlabel_rgb(plcolors[0][0])
-                            self.dashboard.plots[plotdata.plot.id].update_yaxes(
+                            self.dashboard.plots[self.id].update_yaxes(
                                 gridcolor=f"rgba({r},{g},{b},0.5)", secondary_y=True
                             )
                     else:
-                        self.dashboard.plots[plotdata.plot.id].layout.yaxis.title = (  # type: ignore
+                        self.dashboard.plots[self.id].layout.yaxis.title = (  # type: ignore
                             plotdata.options.legend_y
                         )

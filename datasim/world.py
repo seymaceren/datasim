@@ -35,6 +35,7 @@ class World(ABC):
     queues: Final[Dict[str, Queue]]
     quantities: Final[Dict[str, Quantity]]
     stopped: bool = False
+    variation: Final[Optional[str]]
 
     """Number of ticks elapsed in the current simulation."""
     ticks: int = 0
@@ -60,6 +61,7 @@ class World(ABC):
         time_unit: str = "seconds",
         headless: bool = False,
         definition: Optional[Dict] = None,
+        variation: Optional[str] = None,
     ):
         """Create the simulation world.
 
@@ -103,6 +105,8 @@ class World(ABC):
         self.time_unit = time_unit
 
         self.headless = headless
+
+        self.variation = variation
 
         if definition:
             if "constants" in definition:
@@ -350,7 +354,7 @@ class World(ABC):
             p = Process(pid)
             p.terminate()
 
-    def _draw(self):
+    def _updateData(self):
         for plot in self.plots.values():
             plot._update()
 

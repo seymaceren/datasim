@@ -21,6 +21,7 @@ class WaitingPatientState(State):
         log(
             f"{self.patient} will be critical at time {self.patient.critical_time}",
             LogLevel.verbose,
+            world=self.entity.world,
         )
 
     def tick(self):
@@ -28,7 +29,38 @@ class WaitingPatientState(State):
             self.patient.critical_time is not None
             and self.patient.world.time >= self.patient.critical_time
         ):
-            self.patient.died()
+            self.patient.state = DiedPatientState
+
+
+class TreatedPatientState(State):
+
+    def __init__(self, _name, entity):
+        super().__init__("Treated", entity)
+
+    def tick(self):
+        log(
+            f"{self.entity} is treated!",
+            LogLevel.debug,
+            "green",
+            world=self.entity.world,
+        )
+        self.entity.remove()
+
+
+class DiedPatientState(State):
+
+    def __init__(self, _name, patient: "Patient"):
+        super().__init__("Died", patient)
+        self.patient = patient
+
+    def tick(self):
+        log(
+            f"{self.patient} died of illness {self.patient.illness}!",
+            LogLevel.debug,
+            "red",
+            world=self.entity.world,
+        )
+        self.entity.remove()
 
 
 class PatientData:
@@ -49,26 +81,21 @@ class Patient(Entity):
 
     treatment_time: float
     illness: str
-    alive: bool
 
     critical_time: Optional[float] = None
 
     def __init__(self, world, name, illness: str, treatment_time: float):
         self.illness = illness
         self.treatment_time = treatment_time
-        self.alive = True
-        super().__init__(world, name, WaitingPatientState)
+        super().__init__(world, name, WaitingPatientState, True, "Patients")
 
-    def on_state_leaving(self, old_state: State | None, new_state: State | None):
+    def on_state_leaving(
+        self, old_state: State | None, new_state: State | None
+    ) -> State | type | None:
         if (
             isinstance(old_state, UsingResourceState)
             and old_state.resource.id == "beds"
             and old_state.completed
         ):
-            log(f"{self} is treated!", LogLevel.debug, "green")
-            self.world.remove(self)
-
-    def died(self):
-        self.alive = False
-        log(f"{self} died of illness {self.illness}!", LogLevel.debug, "red")
-        self.world.remove(self)
+            return TreatedPatientState
+        return new_state

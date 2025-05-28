@@ -1,3 +1,4 @@
+from sys import stdout
 from colors import color
 from typing import Optional
 
@@ -30,12 +31,14 @@ def log(
         print(
             color(
                 (
-                    f"[{world.time}] {message}"
+                    f"[{world.time}] {message}\n"
                     if world and include_timestamp
-                    else message
+                    else f"{message}\n"
                 ),
                 fg=fg_color,
                 bg=bg_color,
                 style=style,
-            )
+            ),
+            end="",
         )
+        stdout.flush()

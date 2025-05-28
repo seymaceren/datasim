@@ -2,6 +2,7 @@ from codecs import open
 from inspect import getfile
 from itertools import product
 from os import path
+import streamlit as st
 from sys import stdout
 from typing import Dict, Final, List, Optional
 from yaml import full_load
@@ -80,12 +81,14 @@ class Runner:
         self._active = True
 
         if not headless:
-            self.dashboard = Dashboard(self)
+            self.dashboard = Dashboard()
 
         self.worlds = []
 
         for batch in batches:
-            world: World = world_class_object(self, headless, definition)
+            world: World = world_class_object(
+                self, headless, definition, variation=Runner.variation_string(batch)
+            )
             for selector, value in batch.items():
                 world.set_variation(selector, value)
             self.worlds.append(world)
@@ -106,6 +109,10 @@ class Runner:
             LogLevel.error,
             include_timestamp=False,
         )  # Draw terminal logo
+
+    @staticmethod
+    def variation_string(variations: Dict[str, Value]):
+        return ", ".join([f"{k}={v}" for k, v in variations.items()])
 
     def simulate(
         self,
@@ -162,10 +169,18 @@ class Runner:
         )
 
     def _draw(self):
+        world = 0
+        if len(self.worlds) > 1:
+            world = st.selectbox(
+                "Details for run:",
+                range(len(self.worlds)),
+                format_func=lambda i: self.worlds[i].variation,
+            )
+
         if self.dashboard:
             self.dashboard.plots.clear()
 
-        self.worlds[0]._draw()  # TODO select in dashboard
+        self.worlds[world]._updateData()
 
         if self.dashboard:
             self.dashboard._draw()
