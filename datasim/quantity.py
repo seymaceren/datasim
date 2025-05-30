@@ -65,7 +65,7 @@ class Quantity:
             self.make_plot(plot_id, plot_frequency, plot_options)
 
     @staticmethod
-    def from_yaml(world, params: Dict) -> "Quantity":
+    def _from_yaml(world, params: Dict) -> "Quantity":
         id = list(params.keys())
         if len(id) > 1:
             raise ValueError(f"Unable to parse yaml: Multiple keys found in {params}")
@@ -83,7 +83,7 @@ class Quantity:
             params.get("auto_plot", True),
             params.get("plot_id", ""),
             params.get("plot_frequency", 1),
-            PlotOptions.from_yaml(params.get("plot_options", {})),
+            PlotOptions._from_yaml(params.get("plot_options", {})),
         )
 
     def make_plot(

@@ -1,0 +1,28 @@
+[project]
+name = "datasim"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "ansicolors>=1.1.8",
+    "flake8>=7.2.0",
+    "flatdict>=4.0.1",
+    "furo>=2024.8.6",
+    "numpy>=2.2.3",
+    "ordered-set>=4.1.0",
+    "pandas>=2.2.3",
+    "pandas-stubs>=2.2.3",
+    "plotly>=5.24.1",
+    "psutil>=5.9.0",
+    "pydocstyle>=6.3.0",
+    "pyright>=1.1.399",
+    "pytest>=8.3.4",
+    "pytest-cov>=6.0.0",
+    "pytest-md>=0.2.0",
+    "pyyaml>=6.0.2",
+    "scipy>=1.15.1",
+    "sphinx>=8.2.3",
+    "streamlit>=1.43.2",
+    "webcolors>=24.11.1",
+]

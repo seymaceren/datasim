@@ -111,19 +111,19 @@ class World(ABC):
         if definition:
             if "constants" in definition:
                 for constant in definition["constants"]:
-                    Constant.from_yaml(self, constant)
+                    Constant._from_yaml(self, constant)
 
             if "resources" in definition:
                 for resource in definition["resources"]:
-                    Resource.from_yaml(self, resource)
+                    Resource._from_yaml(self, resource)
 
             if "queues" in definition:
                 for queue in definition["queues"]:
-                    Queue.from_yaml(self, queue)
+                    Queue._from_yaml(self, queue)
 
             if "quantities" in definition:
                 for quantity in definition["quantities"]:
-                    Quantity.from_yaml(self, quantity)
+                    Quantity._from_yaml(self, quantity)
 
     def reset(self):
         """Reset the World so you can start a different simulation."""
@@ -183,7 +183,7 @@ class World(ABC):
             return False
         return True
 
-    def set_variation(self, selector: str, value: Value):
+    def _set_variation(self, selector: str, value: Value):
         obj_path = selector.split(".")
         current = self
         for path_part in obj_path[:-1]:
@@ -239,7 +239,7 @@ class World(ABC):
             return quantity
         raise KeyError(f"No queue with id '{key}' found!")
 
-    def simulate(
+    def _simulate(
         self,
         tpu: float = 0.0,
         end_tick: int = 0,
@@ -247,17 +247,6 @@ class World(ABC):
         realtime: bool = False,
         stop_server: bool = False,
     ) -> bool:
-        """Run the simulation.
-
-        Args:
-            tps (float, optional): Ticks per time unit (only in simulation time, unless `realtime=True`).
-                Defaults to :data:`simulation.tpu`.
-            end_tick (int, optional): Tick count to end, unless set to 0. Defaults to 0.
-            restart (bool, optional): Set to `True` if this is a restart. Defaults to False.
-            realtime (bool, optional): Run the simulation in real time. Defaults to False.
-            stop_server (bool, optional): Terminate streamlit python process after the simulation is done.
-                For now, use only for faster debugging workflow. Defaults to False.
-        """
         if self.ended and not restart:
             return False
 
@@ -273,13 +262,11 @@ class World(ABC):
         self.sim_thread.start()
         return True
 
-    def stop(self):
-        """Stop the simulation and wait for it to end."""
+    def _stop(self):
         self.stopped = True
-        self.wait()
+        self._wait()
 
-    def wait(self):
-        """Wait for the simulation to end."""
+    def _wait(self):
         if self.sim_thread:
             self.sim_thread.join()
 

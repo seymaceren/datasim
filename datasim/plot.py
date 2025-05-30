@@ -36,7 +36,6 @@ class PlotData(ABC):
             plot_type ("scatter", "line", "bar", "pie"): Type of plot to render.
             title (str, optional): Title to use over the plot. Defaults to None.
         """
-
         self.world = world
 
         if options.legend_x == "":
@@ -92,6 +91,8 @@ class PlotData(ABC):
                     labels=(
                         self.options.labels
                         or {self.options.legend_y: self.options.name}
+                        if self.options.name
+                        else None
                     ),
                     orientation=self.options.orientation,
                     opacity=self.options.opacity,
@@ -143,6 +144,8 @@ class PlotData(ABC):
                     labels=(
                         self.options.labels
                         or {self.options.legend_y: self.options.name}
+                        if self.options.name
+                        else None
                     ),
                     orientation=self.options.orientation,
                     log_x=self.options.log_x,
@@ -187,6 +190,8 @@ class PlotData(ABC):
                     labels=(
                         self.options.labels
                         or {self.options.legend_y: self.options.name}
+                        if self.options.name
+                        else None
                     ),
                     opacity=self.options.opacity,
                     template=self.options.template,
@@ -230,6 +235,8 @@ class PlotData(ABC):
                     labels=(
                         self.options.labels
                         or {self.options.legend_y: self.options.name}
+                        if self.options.name
+                        else None
                     ),
                     orientation=self.options.orientation,
                     opacity=self.options.opacity,

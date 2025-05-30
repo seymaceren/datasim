@@ -46,8 +46,8 @@ class Entity(ABC):
         self.index = Entity.registry.get(type(self), 0) + 1
         Entity.registry[type(self)] = self.index
         # Use the serial number as name if no name is given
-        if not id:
-            id = f"{str(type(self))} {self.id:03}"
+        if id is None:
+            id = f"{str(type(self))} {self.index:03}"
         self.id = id
         if isinstance(initial_state, State):
             self.state = initial_state
@@ -167,6 +167,7 @@ class Entity(ABC):
         self.ticks_in_current_state = 0
 
     def remove(self):
+        """Remove this `Entity` from its `World`."""
         self.world.remove(self)
 
     def on_state_entered(self, old_state: "State | None", new_state: "State | None"):
@@ -182,7 +183,8 @@ class Entity(ABC):
         self, old_state: "State | None", new_state: "State | None"
     ) -> "State | type | None":
         """Implement this function to run when the current state is being left.
-        Can be used (carefully) to override the new state to enter.
+
+        Can be used (with care) to override the new state to enter.
 
         Args:
             old_state (State or None): The state that was left.
@@ -248,4 +250,5 @@ class State(ABC):
         pass
 
     def __eq__(self, object):
+        """Directly compare a State object to a type to check if it is an instance of that type."""
         return self is object or (isinstance(object, type) and isinstance(self, object))

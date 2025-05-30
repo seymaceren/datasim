@@ -49,6 +49,8 @@ class PlotType(Enum):
 
 
 class PlotOptions:
+    """Defines the options for plotting a PlotData."""
+
     title: Optional[str]
     name: Optional[str]
     plot_type: Optional[PlotType]
@@ -179,6 +181,73 @@ class PlotOptions:
         trendline_scope: str = "trace",
         trendline_color_override: Optional[Any] = None,
     ):
+        """Create Plot options.
+
+        Args:
+            title (Optional[str], optional): Title of the plot. Defaults to None.
+            name (Optional[str], optional): Name of the series. Defaults to None.
+            plot_type (Optional[PlotType], optional): TODO. Defaults to None.
+            legend_x (str, optional): TODO. Defaults to "".
+            legend_y (str, optional): TODO. Defaults to "".
+            secondary_y (bool, optional): TODO. Defaults to False.
+            color (Optional[str], optional): TODO. Defaults to None.
+            color_continuous_scale (Optional[Any], optional): TODO. Defaults to None.
+            color_continuous_midpoint (Optional[Any], optional): TODO. Defaults to None.
+            color_discrete_map (Optional[Any], optional): TODO. Defaults to None.
+            color_discrete_sequence (Optional[Any], optional): TODO. Defaults to None.
+            range_color (Optional[Any], optional): TODO. Defaults to None.
+            hover_name (Optional[Any], optional): TODO. Defaults to None.
+            hover_data (Optional[Any], optional): TODO. Defaults to None.
+            custom_data (Optional[Any], optional): TODO. Defaults to None.
+            text (Optional[Any], optional): TODO. Defaults to None.
+            facet_row (Optional[Any], optional): TODO. Defaults to None.
+            facet_col (Optional[Any], optional): TODO. Defaults to None.
+            facet_row_spacing (Optional[Any], optional): TODO. Defaults to None.
+            facet_col_spacing (Optional[Any], optional): TODO. Defaults to None.
+            facet_col_wrap (int, optional): TODO. Defaults to 0.
+            error_x (Optional[Any], optional): TODO. Defaults to None.
+            error_y (Optional[Any], optional): TODO. Defaults to None.
+            error_x_minus (Optional[Any], optional): TODO. Defaults to None.
+            error_y_minus (Optional[Any], optional): TODO. Defaults to None.
+            category_orders (Optional[Any], optional): TODO. Defaults to None.
+            labels (Optional[Any], optional): TODO. Defaults to None.
+            orientation (Optional[Any], optional): TODO. Defaults to None.
+            opacity (Optional[Any], optional): TODO. Defaults to None.
+            log_x (bool, optional): TODO. Defaults to False.
+            log_y (bool, optional): TODO. Defaults to False.
+            range_x (Optional[Any], optional): TODO. Defaults to None.
+            range_y (Optional[Any], optional): TODO. Defaults to None.
+            pattern_shape (Optional[Any], optional): TODO. Defaults to None.
+            pattern_shape_map (Optional[Any], optional): TODO. Defaults to None.
+            pattern_shape_sequence (Optional[Any], optional): TODO. Defaults to None.
+            base (Optional[Any], optional): TODO. Defaults to None.
+            barmode (str, optional): TODO. Defaults to "relative".
+            text_auto (bool, optional): TODO. Defaults to False.
+            template (Optional[Any], optional): TODO. Defaults to None.
+            width (Optional[Any], optional): TODO. Defaults to None.
+            height (Optional[Any], optional): TODO. Defaults to None.
+            animation_frame (Optional[Any], optional): TODO. Defaults to None.
+            animation_group (Optional[Any], optional): TODO. Defaults to None.
+            symbol (Optional[Any], optional): TODO. Defaults to None.
+            symbol_map (Optional[Any], optional): TODO. Defaults to None.
+            symbol_sequence (Optional[Any], optional): TODO. Defaults to None.
+            render_mode (str, optional): TODO. Defaults to "auto".
+            line_dash (Optional[Any], optional): TODO. Defaults to None.
+            line_dash_map (Optional[Any], optional): TODO. Defaults to None.
+            line_dash_sequence (Optional[Any], optional): TODO. Defaults to None.
+            line_group (Optional[Any], optional): TODO. Defaults to None.
+            line_shape (Optional[Any], optional): TODO. Defaults to None.
+            markers (bool, optional): TODO. Defaults to False.
+            hole (Optional[Any], optional): TODO. Defaults to None.
+            size (Optional[Any], optional): TODO. Defaults to None.
+            size_max (Optional[Any], optional): TODO. Defaults to None.
+            marginal_x (Optional[Any], optional): TODO. Defaults to None.
+            marginal_y (Optional[Any], optional): TODO. Defaults to None.
+            trendline (Optional[Any], optional): TODO. Defaults to None.
+            trendline_options (Optional[Any], optional): TODO. Defaults to None.
+            trendline_scope (str, optional): TODO. Defaults to "trace".
+            trendline_color_override (Optional[Any], optional): TODO. Defaults to None.
+        """
         self.title = title
         self.name = name
         self.plot_type = plot_type
@@ -244,7 +313,7 @@ class PlotOptions:
         self.trendline_color_override = trendline_color_override
 
     @staticmethod
-    def from_yaml(params: Dict) -> "PlotOptions":
+    def _from_yaml(params: Dict) -> "PlotOptions":
         if "series_color" in params:
             if "color_discrete_sequence" not in params:
                 params["color_discrete_sequence"] = [params["series_color"]]

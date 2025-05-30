@@ -14,6 +14,11 @@ from .world import World
 
 
 class Runner:
+    """Main simulation runner for DataSim.
+
+    This class creates the World objects for any batches of runs defined in the definition yaml of the target class.
+    """
+
     dashboard: Optional[Dashboard] = None
     worlds: List[World]
     title: Final[str]
@@ -27,6 +32,16 @@ class Runner:
     stop_server: bool = False
 
     def __init__(self, world_class_object, headless: bool = False):
+        """Create a simulation Runner.
+
+        Args:
+            world_class_object (type or object): Type, class or object by which
+                the world's type is determined
+            headless (bool, optional): Run without dashboard. Defaults to False.
+
+        Raises:
+            ValueError: If the definition file contains an invalid grid definition.
+        """
         definition: Optional[Dict[str, Dict]] = None
 
         type_file = getfile(world_class_object)
@@ -38,7 +53,7 @@ class Runner:
             path.abspath(path.dirname(type_file)), f"{type_filename}.yaml"
         )
 
-        if definition_file:
+        if definition_file and path.exists(definition_file):
             definition = full_load(open(definition_file))
 
         batches: List[Dict[str, Value]] = []
@@ -87,14 +102,19 @@ class Runner:
 
         for batch in batches:
             world: World = world_class_object(
-                self, headless, definition, variation=Runner.variation_string(batch)
+                self,
+                headless=headless,
+                definition=definition,
+                variation=Runner._variation_string(batch),
             )
             for selector, value in batch.items():
-                world.set_variation(selector, value)
+                world._set_variation(selector, value)
             self.worlds.append(world)
 
         if len(batches) == 0:
-            self.worlds.append(world_class_object(self, headless, definition))
+            self.worlds.append(
+                world_class_object(self, headless=headless, definition=definition)
+            )
 
         self.title = self.worlds[0].title
         if len(self.worlds) > 1:
@@ -111,7 +131,7 @@ class Runner:
         )  # Draw terminal logo
 
     @staticmethod
-    def variation_string(variations: Dict[str, Value]):
+    def _variation_string(variations: Dict[str, Value]):
         return ", ".join([f"{k}={v}" for k, v in variations.items()])
 
     def simulate(
@@ -122,6 +142,20 @@ class Runner:
         realtime: bool = False,
         stop_server: bool = False,
     ) -> bool:
+        """Run the simulation for all worlds.
+
+        Args:
+            tps (float, optional): Ticks per time unit (only in simulation time, unless `realtime=True`).
+                Defaults to :data:`simulation.tpu`.
+            end_tick (int, optional): Tick count to end, unless set to 0. Defaults to 0.
+            restart (bool, optional): Set to `True` if this is a restart. Defaults to False.
+            realtime (bool, optional): Run the simulation in real time. Defaults to False.
+            stop_server (bool, optional): Terminate streamlit python process after the simulation is done.
+                For now, use only for faster debugging workflow. Defaults to False.
+
+        Returns:
+            `True` if the simulation is still running.
+        """
         if not self.started:
             log(
                 f"\n▟{"▀"*(4+len(self.title))}▜▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▙\n"
@@ -140,12 +174,13 @@ class Runner:
 
     @property
     def active(self):
+        """Check if the simulation is still actively running."""
         if self._active:
             any_active = False
 
             for world in self.worlds:
                 if isinstance(world, World):
-                    any_active |= world.active and world.simulate(
+                    any_active |= world.active and world._simulate(
                         self.tpu,
                         self.end_tick,
                         self.restart,
@@ -157,9 +192,15 @@ class Runner:
 
         return self._active
 
-    def wait(self):
+    def stop(self):
+        """Stop the simulation and wait for it to end."""
         for world in self.worlds:
-            world.wait()
+            world._stop()
+
+    def wait(self):
+        """Wait for the simulation of all worlds to end."""
+        for world in self.worlds:
+            world._wait()
 
         log(
             f"\n▟{"▀"*(4+len(self.title))}▜▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▙\n"

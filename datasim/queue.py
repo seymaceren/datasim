@@ -49,7 +49,7 @@ class Queue(Generic[EntityType]):
             self.make_plot(plot_id, plot_frequency, plot_options)
 
     @staticmethod
-    def from_yaml(world, params: Dict) -> "Queue":
+    def _from_yaml(world, params: Dict) -> "Queue":
         id = list(params.keys())
         if len(id) > 1:
             raise ValueError(f"Unable to parse yaml: Multiple keys found in {params}")
@@ -64,7 +64,7 @@ class Queue(Generic[EntityType]):
             params.get("auto_plot", True),
             params.get("plot_id", ""),
             params.get("plot_frequency", 1),
-            PlotOptions.from_yaml(params.get("plot_options", {})),
+            PlotOptions._from_yaml(params.get("plot_options", {})),
         )
 
     @property

@@ -3,7 +3,9 @@ import subprocess
 
 
 print("\n*** flake8 ***\n")
-flake = subprocess.call(["python", "-m", "flake8", "--max-line-length=120"])
+flake = subprocess.call(
+    ["python", "-m", "flake8", "--extend-exclude", ".venv", "--max-line-length=120"]
+)
 
 print("\n\n*** pyright ***\n")
 right = subprocess.call(["python", "-m", "pyright", "--project", "pyrightconfig.json"])

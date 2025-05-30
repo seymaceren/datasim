@@ -1,5 +1,5 @@
 from pytest import raises
-from datasim import Entity, State, World
+from datasim import Entity, Runner, State, World
 
 
 class IdleState(State):
@@ -11,22 +11,21 @@ class IdleState(State):
 
 
 def test_entity():
-    World.reset()
-    world = World()
-    en1 = Entity("Test entity 1", IdleState)
+    world = Runner(World).worlds[0]
+    en1 = Entity(world, "Test entity 1", IdleState)
     world.add(en1)
-    en2 = Entity("Test entity 2", IdleState("Idle2", None))
+    en2 = Entity(world, "Test entity 2", IdleState("Idle2", None))
     world.add(en2)
     assert en2.state.name == "Idle2"
     with raises(TypeError, match=".*not a subclass of State.*"):
         en2.state = world
     old_state = en2.state
     en2.state = IdleState
-    assert world.simulate(tpu=1.0, end_tick=20)
+    assert world._simulate(tpu=1.0, end_tick=20)
     assert len(world.entities) == 2
-    assert world.entity(en1.name).id == en1.id
+    assert world.entity(en1.id) == en1
     assert world.entity("Test entity 2") == en2
     assert en2.state != old_state
     with raises(ValueError, match=".*already belongs to.*"):
         en1.state = old_state
-    world.wait()
+    world._wait()
