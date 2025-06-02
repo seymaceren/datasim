@@ -44,14 +44,15 @@ class Resource:
         max_queue: int = 0,
         capacity: Number = None,
         start_amount: Number = None,
-        auto_plot: bool = True,
-        plot_id: str = "",
-        plot_frequency: int = 1,
+        gather: bool = True,
+        data_id: str = "",
+        sample_frequency: int = 1,
         plot_options: PlotOptions = PlotOptions(),
     ):
         """Create a resource.
 
         Args:
+            world: The world to add this Resource to.
             id (`str`): Descriptive name of the resource.
             resource_type (`str`): Identifier of the resource in the pool.
             slots (`int`, optional): Number of possible simultaneous users.
@@ -65,11 +66,13 @@ class Resource:
             capacity (`int`, optional): Optional maximum amount stored in the pool. No maximum if set to 0.
                 Defaults to `0`.
             start_amount (`int`, optional): Starting amount of resources in the pool. Defaults to `0`.
-            auto_plot (`PlotType` or `False`, optional): Whether to automatically add a plot to the dashboard
-                for this resource, and which type of plot if so. Defaults to `PlotType.line`.
-            plot_frequency (int, optional): Whether to add a data point every `frequency` ticks.
+            gather (`PlotType` or `False`, optional): Whether to automatically gather data for the output
+                for this resource, and which type of plot if so. Defaults to `PlotType.none` to only save.
+            data_id (str, optional): id for the data source if `gather` is True. Defaults to empty string
+                which sets `data_id` to the value of this Resource's `id`.
+            sample_frequency (int, optional): Whether to add a data point every `frequency` ticks.
                 If set to `0`, adds a data point only when the quantity changes. Defaults to `1`.
-            plot_title (Optional[str], optional): An optional plot title. Defaults to `None`.
+            plot_options (Optional[PlotOptions], optional): Options for a plot. Defaults to default PlotOptions.
         """
         self.world = world
         self.id = id
@@ -86,8 +89,8 @@ class Resource:
 
         self.world.add(self)
 
-        if auto_plot:
-            self.make_plot(plot_id, plot_frequency, plot_options)
+        if gather:
+            self.add_output(data_id, sample_frequency, plot_options)
 
     @staticmethod
     def _from_yaml(world, params: Dict) -> "Resource":
@@ -107,36 +110,37 @@ class Resource:
             params.get("max_queue", 0),
             params.get("capacity", None),
             params.get("start_amount", None),
-            params.get("auto_plot", True),
-            params.get("plot_id", ""),
-            params.get("plot_frequency", 1),
+            params.get("gather", True),
+            params.get("data_id", ""),
+            params.get("sample_frequency", 1),
             PlotOptions._from_yaml(params.get("plot_options", {})),
         )
 
-    def make_plot(
+    def add_output(
         self,
-        plot_id: str = "",
+        data_id: str = "",
         frequency: int = 1,
         plot_options: PlotOptions = PlotOptions(),
     ):
-        """Create a plot for this Resource. Also automatically used when `auto_plot` is True at creation.
+        """Create an output source for this Resource. Also automatically used when `gather` is True at creation.
 
         Args:
-            plot_type (PlotType, optional): The type of plot to add. Defaults to PlotType.line.
-            frequency (int, optional): Plot every x ticks or only on change if set to 0. Defaults to 0.
-            plot_title (Optional[str], optional): Optional title for the plot. Defaults to None.
+            data_id (str, optional): Unique identifier of the source. Defaults to empty string which sets `data_id`
+                to the value of this Resource's `id`.
+            frequency (int, optional): Saves every x ticks or only on change if set to 0. Defaults to 0.
+            plot_options (Optional[PlotOptions], optional): Options for a plot. Defaults to default PlotOptions.
         """
-        from .plot import ResourcePlotData
+        from .dataset import ResourceData
 
-        if plot_id == "":
-            plot_id = self.id
+        if data_id == "":
+            data_id = self.id
 
         if plot_options.legend_y == "":
             plot_options.legend_y = self.resource_type
 
-        self.world.add_plot(
-            plot_id,
-            ResourcePlotData(
+        self.world.add_data(
+            data_id,
+            ResourceData(
                 self.world, self.id, self.capacity is None, frequency, plot_options
             ),
         )

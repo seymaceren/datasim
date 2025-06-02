@@ -12,12 +12,14 @@ Quick Python data generating simulation tool with readable code and optional das
 
 The code is meant to be as short as possible without too many bells and whistles, leaving anything other than the main simulation to external proven libraries.
 
-The simulation is optionally tied to a Streamlit dashboard.
+The simulation is optionally tied to a Streamlit dashboard, from which the generated data can be easily exported as Pickle or CSV files.
+
+Without the dashboard, generated data can be automatically saved from the command line running the simulation.
 
 ## API Documentation
 Auto-generated, on [sabvdf.github.io/datasim](https://sabvdf.github.io/datasim/)
 
-## Usage
+## Usage (warning: outdated!)
 See sample code, the basic setup is:
 
 - Implement entities as subclasses of `datasim.Entity` and their behavior as subclasses of `datasim.State`
@@ -27,14 +29,20 @@ See sample code, the basic setup is:
 - Run `main.py`
 
 ## Plans
+### Beta
 Before calling a release 0.9 (beta), I plan to implement the following:
 
 - Output all data from the simulation
 - Add entity generator class using Numpy random distributions
-- Define more plot attributes and combine multiple traces in a plot
-- Add a batch runner to gather data over multiple World runs instead of within one
-  - Using different source data
-  - Using skewed or biased distributions
-  - Using parameter grids
-- Add one or more of YAML / JSON / XML world definition files to run a no-code simulation
+  - With options for skewed or biased distributions
+- Add more options to the batch runner
+  - Using different (combinations of) source data files and generators
+  - Outputting plots and data aggregated over the runs
+- Automatically save data from a command line invocation
 - Get test coverage to 100%
+
+### Future versions
+After an initial version, I have more ideas to expand the functionalities:
+
+- Add a physics mode (using a library) to entities, so that it's possible to run more complex simulations
+- Show a live updating representation of a longer running simulation with physical representation

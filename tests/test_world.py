@@ -1,4 +1,5 @@
-from datasim import Dashboard, logging, LogLevel, Runner, World
+from datasim import logging, LogLevel, Runner, World
+from datasim.streamlit_dashboard import StreamlitDashboard
 
 
 def test_world_headless():
@@ -17,7 +18,7 @@ def test_world_headless():
 
 def test_world_dashboard():
     logging.level = LogLevel.debug
-    dashboard = Dashboard()
+    dashboard = StreamlitDashboard()
     dashboard._draw()
     assert hasattr(dashboard, "plots")
     runner = Runner(World)

@@ -7,9 +7,10 @@ from time import sleep
 from typing import Any, Dict, Final, Optional, Tuple
 
 from .constant import Constant
+from .output import Output
 from .entity import Entity
 from .logging import log, LogLevel
-from .plot import Plot, PlotData
+from .dataset import Dataset, DataSource
 from .quantity import Quantity
 from .queue import Queue
 from .resource import Resource
@@ -22,6 +23,8 @@ class World(ABC):
     A simulation should run in a subclass of World.
     """
 
+    index: Final[int]
+
     update_time: float | None = 1.0
 
     runner: Final
@@ -29,7 +32,8 @@ class World(ABC):
     title: Final[str]
     entities: Final[OrderedSet[Entity]]
     _entity_dict: Final[Dict[str, Entity]]
-    plots: Final[Dict[str, Plot]]
+    _entity_registry: Final[dict[type, int]] = {}
+    datasets: Final[Dict[str, Dataset]]
     constants: Final[Dict[str, Any]]
     resources: Final[Dict[str, Resource]]
     queues: Final[Dict[str, Queue]]
@@ -70,6 +74,13 @@ class World(ABC):
             tps (float, optional): Ticks per second (only in simulation time,
                 unless running :meth:`simulate()` with `realtime=True`). Defaults to 10.0.
         """
+        if not hasattr(World, "_registry"):
+            World._by_index: Dict[int, World] = {}
+            World._registry: Dict[World, int] = {}
+        self.index = World._registry.get(self, 0) + 1
+        World._registry[self] = self.index
+        World._by_index[self.index] = self
+
         self.runner = runner
 
         if self.active:
@@ -94,7 +105,7 @@ class World(ABC):
         self.title = title
         self.entities = OrderedSet[Entity]([])
         self._entity_dict = {}
-        self.plots = {}
+        self.datasets = {}
         self.constants = {}
         self.resources = {}
         self.queues = {}
@@ -124,6 +135,11 @@ class World(ABC):
             if "quantities" in definition:
                 for quantity in definition["quantities"]:
                     Quantity._from_yaml(self, quantity)
+
+    @property
+    def output(self) -> Output:
+        """Get the output this world feeds to."""
+        return self.runner.output
 
     def reset(self):
         """Reset the World so you can start a different simulation."""
@@ -315,7 +331,7 @@ class World(ABC):
 
             self.after_entities_update()
 
-            for plot in self.plots.values():
+            for plot in self.datasets.values():
                 plot._tick()
 
             self.ticks += 1
@@ -324,13 +340,6 @@ class World(ABC):
                 sleep(self.tick_time)
 
         self.ended = True
-        log(
-            f"\n▟{"▀"*(4+len(self.title))}▜▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▙\n"
-            + f"█  {self.title}  ▐  End of simulation  █\n"
-            + f"▜{"▄"*(4+len(self.title))}▟▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▛\n",
-            LogLevel.debug,
-            include_timestamp=False,
-        )
 
         self.update_time = 0.0
 
@@ -342,15 +351,15 @@ class World(ABC):
             p.terminate()
 
     def _updateData(self):
-        for plot in self.plots.values():
-            plot._update()
+        for dataset in self.datasets.values():
+            dataset._update()
 
-    def add_plot(self, plot_id: str, data: PlotData) -> Tuple[Plot, int]:
-        """Add a plot to the world: collects data, and plots if dashboard is present."""
+    def add_data(self, dataset_id: str, source: DataSource) -> Tuple[Dataset, int]:
+        """Add a data source to the world: collects data, and plots if dashboard is present and plot type is set."""
         index = 0
-        if plot_id not in self.plots:
-            self.plots[plot_id] = Plot(self, plot_id, data)
+        if dataset_id not in self.datasets:
+            self.datasets[dataset_id] = Dataset(self, dataset_id, source)
         else:
-            index = self.plots[plot_id].add_trace(data)
+            index = self.datasets[dataset_id].add_source(source)
 
-        return (self.plots[plot_id], index)
+        return (self.datasets[dataset_id], index)

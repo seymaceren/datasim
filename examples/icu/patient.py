@@ -1,5 +1,5 @@
 from typing import List, Optional
-from datasim import Entity, log, LogLevel, State, UsingResourceState
+from datasim import Entity, log, LogLevel, PlotOptions, State, UsingResourceState
 
 
 class WaitingPatientState(State):
@@ -87,7 +87,8 @@ class Patient(Entity):
     def __init__(self, world, name, illness: str, treatment_time: float):
         self.illness = illness
         self.treatment_time = treatment_time
-        super().__init__(world, name, WaitingPatientState, True, "Patients")
+        options = PlotOptions(auto_name=True)
+        super().__init__(world, name, WaitingPatientState, True, "Patients", options)
 
     def on_state_leaving(
         self, old_state: State | None, new_state: State | None

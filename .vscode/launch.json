@@ -22,7 +22,9 @@
       "program": "sim_main.py",
       "args": [
         "-v",
-        "world=examples.icu.icu.ICU"
+        "world=examples.icu.icu.ICU",
+        "-o=output",
+        "-c"
       ],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal"

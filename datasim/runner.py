@@ -2,12 +2,13 @@ from codecs import open
 from inspect import getfile
 from itertools import product
 from os import path
-import streamlit as st
+from threading import Thread
+from time import sleep
 from sys import stdout
 from typing import Dict, Final, List, Optional
 from yaml import full_load
 
-from .dashboard import Dashboard
+from .output import Output, SimpleFileOutput
 from .logging import log, LogLevel
 from .types import Value
 from .world import World
@@ -19,9 +20,10 @@ class Runner:
     This class creates the World objects for any batches of runs defined in the definition yaml of the target class.
     """
 
-    dashboard: Optional[Dashboard] = None
+    output: Output
     worlds: List[World]
     title: Final[str]
+    headless: bool
     started: bool
     _active: bool
     update_time: float | None
@@ -30,8 +32,17 @@ class Runner:
     restart: bool = False
     realtime: bool = False
     stop_server: bool = False
+    control_thread: Thread
+    auto_output_path: str | None
+    auto_output_csv: bool
 
-    def __init__(self, world_class_object, headless: bool = False):
+    def __init__(
+        self,
+        world_class_object,
+        headless: bool = False,
+        auto_output_path: str | None = None,
+        auto_output_csv: bool = False,
+    ):
         """Create a simulation Runner.
 
         Args:
@@ -95,8 +106,13 @@ class Runner:
 
         self._active = True
 
-        if not headless:
-            self.dashboard = Dashboard()
+        self.headless = headless
+        if headless:
+            self.output = SimpleFileOutput()
+        else:
+            from .streamlit_dashboard import StreamlitDashboard
+
+            self.output = StreamlitDashboard()
 
         self.worlds = []
 
@@ -116,12 +132,18 @@ class Runner:
                 world_class_object(self, headless=headless, definition=definition)
             )
 
+        for world in self.worlds:
+            self.output._add_world(world.index)
+
         self.title = self.worlds[0].title
         if len(self.worlds) > 1:
             self.title = f"{len(self.worlds)}x {self.title}"
         self.started = False
 
         self.update_time = 1.0
+
+        self.auto_output_path = auto_output_path
+        self.auto_output_csv = auto_output_csv
 
         stdout.reconfigure(encoding="utf-8")  # type: ignore
         log(
@@ -169,8 +191,33 @@ class Runner:
             self.realtime = realtime
             self.stop_server = stop_server
             self.started = True
+            self.control_thread = Thread(target=self._check_active)
+            self.control_thread.start()
 
         return self.active
+
+    def _check_active(self):
+        while True:
+            sleep(1.0)
+            if not self.active:
+                break
+        self._finish()
+
+    def _finish(self):
+        log(
+            f"\n▟{"▀"*(4+len(self.title))}▜▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▙\n"
+            + f"█  {self.title}  ▐  End of simulation  █\n"
+            + f"▜{"▄"*(4+len(self.title))}▟▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▛\n",
+            LogLevel.debug,
+        )
+
+        if self.headless:
+            self._draw()
+
+        if self.auto_output_path:
+            self.output._save(
+                self.auto_output_path, "csv" if self.auto_output_csv else "pickle"
+            )
 
     @property
     def active(self):
@@ -202,26 +249,15 @@ class Runner:
         for world in self.worlds:
             world._wait()
 
-        log(
-            f"\n▟{"▀"*(4+len(self.title))}▜▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▙\n"
-            + f"█  {self.title}  ▐  End of simulation  █\n"
-            + f"▜{"▄"*(4+len(self.title))}▟▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▛\n",
-            LogLevel.debug,
-        )
-
     def _draw(self):
-        world = 0
-        if len(self.worlds) > 1:
-            world = st.selectbox(
-                "Details for run:",
-                range(len(self.worlds)),
-                format_func=lambda i: self.worlds[i].variation,
-            )
+        worlds = self.output._select_world(self.worlds)
 
-        if self.dashboard:
-            self.dashboard.plots.clear()
+        if self.output:
+            for world in worlds:
+                self.output._clear(self.worlds[world].index)
 
-        self.worlds[world]._updateData()
+        for world in worlds:
+            self.worlds[world]._updateData()
 
-        if self.dashboard:
-            self.dashboard._draw()
+        if self.output:
+            self.output._draw()

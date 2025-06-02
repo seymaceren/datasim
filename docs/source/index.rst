@@ -5,33 +5,55 @@ This library provides a framework for generating data by running simulations.
 .. autosummary::
    :toctree: generated
 
-   datasim.Dashboard
+   datasim.Constant
+   :members:
+   datasim.Dataset
+   :members:
+   datasim.DataSource
+   :members:
+   datasim.XYData
+   :members:
+   datasim.CategoryData
+   :members:
+   datasim.NPData
+   :members:
+   datasim.ResourceData
+   :members:
+   datasim.QueueData
+   :members:
+   datasim.StateData
    :members:
    datasim.Entity
    :members:
-   datasim.Plot
+   datasim.State
    :members:
-   datasim.PlotData
+   datasim.logging
    :members:
-   datasim.XYPlotData
+   datasim.Output
    :members:
-   datasim.CategoryPlotData
+   datasim.SimpleFileOutput
    :members:
-   datasim.NPPlotData
-   :members:
-   datasim.ResourcePlotData
-   :members:
-   datasim.QueuePlotData
-   :members:
-   datasim.StatePlotData
+   datasim.Quantity
    :members:
    datasim.Queue
    :members:
    datasim.Resource
    :members:
-   datasim.State
-   :members:
    datasim.UsingResourceState
+   :members:
+   datasim.Runner
+   :members:
+   datasim.StreamlitDashboard
+   :members:
+   datasim.streamlit_update
+   :members:
+   datasim.LogLevel
+   :members:
+   datasim.PlotType
+   :members:
+   datasim.PlotOptions
+   :members:
+   datasim.UseResult
    :members:
    datasim.World
    :members:

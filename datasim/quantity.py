@@ -1,23 +1,23 @@
 from typing import Dict, Final, List, Self, Tuple
 
-from .plot import PlotOptions, XYPlotData
+from .dataset import PlotOptions, XYData
 from .types import Number
 
 
 class Quantity:
-    """Representation of a custom quantity that can be automatically plotted and exported."""
+    """Representation of a custom quantity that can be automatically saved and plotted."""
 
     world: Final
     """Unique identifier of the quantity."""
     id: Final[str]
-    """Descriptive type of things or unit of the quantity, used as plot axis legend."""
+    """Descriptive type of things or unit of the quantity (also used as plot axis legend)."""
     quantity_type: str
     """Optional minimum value of the quantity."""
     min: Number
     """Optional maximum value of the quantity."""
     max: Number
 
-    _plots: List[Tuple[int, XYPlotData]]
+    _outputs: List[Tuple[int, XYData]]
     _value: Number
 
     def __init__(
@@ -28,9 +28,9 @@ class Quantity:
         start_value: Number = None,
         min: Number = None,
         max: Number = None,
-        auto_plot: bool = True,
-        plot_id: str = "",
-        plot_frequency: int = 1,
+        gather: bool = True,
+        data_id: str = "",
+        sample_frequency: int = 1,
         plot_options: PlotOptions = PlotOptions(),
     ):
         """Create a quantity.
@@ -39,30 +39,32 @@ class Quantity:
             world (`World`): the World to add this quantity to.
             id (str): Descriptive name of the quantity.
             start_value (int | float | None, optional): Starting value of the quantity.
-                If set to `None`, won't add data points until `__set__` is called, even if auto_plot is set
-                and plot_frequency is greater than zero. Defaults to `None`.
+                If set to `None`, won't add data points until `__set__` is called, even if gather is set
+                and sample_frequency is greater than zero. Defaults to `None`.
             min (int | float | None, optional): Optional minimum value of the quantity.
                 If set, any attempts to set an amount below this value will be clamped off. Defaults to `None`.
             max (int | float | None, optional): Optional maximum value of the quantity.
                 If set, any attempts to set an amount above this value will be clamped off. Defaults to `None`.
-            auto_plot (`PlotType` or `False`, optional): Whether to automatically add a plot to the dashboard
-                for this quantity, and which type of plot if so. Defaults to `PlotType.line`.
-            plot_frequency (int, optional): Whether to add a data point every `frequency` ticks.
+            gather (`PlotType` or `False`, optional): Whether to automatically gather data for the output
+                for this quantity, and which type of plot if so. Defaults to `PlotType.none` to only save.
+            data_id (str, optional): id for the data source if `gather` is True. Defaults to empty string
+                which sets `data_id` to the value of this Quantity's `id`.
+            sample_frequency (int, optional): Whether to add a data point every `frequency` ticks.
                 If set to `0`, adds a data point only when the quantity changes. Defaults to `0`.
-            plot_title (Optional[str], optional): An optional plot title. Defaults to `None`.
+            plot_options (Optional[PlotOptions], optional): Options for a plot. Defaults to default PlotOptions.
         """
         self.world = world
         self.id = id
         self.quantity_type = quantity_type
-        self._plots = []
+        self._outputs = []
         self.min = min
         self.max = max
         self._value = start_value
 
         self.world.add(self)
 
-        if auto_plot:
-            self.make_plot(plot_id, plot_frequency, plot_options)
+        if gather:
+            self.add_output(data_id, sample_frequency, plot_options)
 
     @staticmethod
     def _from_yaml(world, params: Dict) -> "Quantity":
@@ -80,27 +82,28 @@ class Quantity:
             params.get("start_value", None),
             params.get("min", None),
             params.get("max", None),
-            params.get("auto_plot", True),
-            params.get("plot_id", ""),
-            params.get("plot_frequency", 1),
+            params.get("gather", True),
+            params.get("data_id", ""),
+            params.get("sample_frequency", 1),
             PlotOptions._from_yaml(params.get("plot_options", {})),
         )
 
-    def make_plot(
+    def add_output(
         self,
-        plot_id="",
+        data_id: str = "",
         frequency: int = 0,
         plot_options: PlotOptions = PlotOptions(),
     ):
-        """Create a plot for this Quantity. Also automatically used when `auto_plot` is True at creation.
+        """Create an output source for this Quantity. Also automatically used when `gather` is True at creation.
 
         Args:
-            plot_type (PlotType, optional): The type of plot to add. Defaults to PlotType.line.
-            frequency (int, optional): Plot every x ticks or only on change if set to 0. Defaults to 0.
-            plot_title (Optional[str], optional): Optional title for the plot. Defaults to None.
+            data_id (str, optional): Unique identifier of the source. Defaults to empty string which sets `data_id`
+                to the value of this Quantity's `id`.
+            frequency (int, optional): Saves every x ticks or only on change if set to 0. Defaults to 0.
+            plot_options (Optional[PlotOptions], optional): Options for a plot. Defaults to default PlotOptions.
         """
-        if plot_id == "":
-            plot_id = self.id
+        if data_id == "":
+            data_id = self.id
 
         if plot_options.legend_x == "":
             plot_options.legend_x = self.world.time_unit
@@ -110,17 +113,15 @@ class Quantity:
         x = []
         y = []
         if self._value:
-            x.append(0.0)
+            x.append(self.world.time)
             y.append(self._value)
-        data = XYPlotData(self.world, x, y, plot_options)
-
-        self._plots.append((frequency, data))
-
-        self.world.add_plot(plot_id, data)
+        data = XYData(self.world, x, y, plot_options)
+        self._outputs.append((frequency, data))
+        self.world.add_data(data_id, data)
 
     def _tick(self):
         if self._value:
-            for index, (frequency, data) in enumerate(self._plots):
+            for index, (frequency, data) in enumerate(self._outputs):
                 if self.world.ticks % frequency == 0:
                     data.append(self.world.time, self._value)
 
@@ -135,7 +136,7 @@ class Quantity:
                 )
             return
         self._value = value
-        for frequency, data in self._plots:
+        for frequency, data in self._outputs:
             if frequency == 0:
                 data.append(self.world.time, self._value)
 

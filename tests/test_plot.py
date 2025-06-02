@@ -4,19 +4,19 @@ from datasim import (
     Resource,
     Runner,
     World,
-    XYPlotData,
+    XYData,
 )
 
 
 def test_plot():
     world = Runner(World).worlds[0]
     print(world.title)
-    xydata = XYPlotData(world)
+    xydata = XYData(world)
     xydata.append(10.0, 20.0)
     xydata.append(20.0, 50.0)
     xydata.append(30.0, 30.0)
     assert xydata._buffer_index == 3
-    plot = world.add_plot("plot1", xydata)
+    plot = world.add_data("plot1", xydata)
 
     water = Resource(world, "water", "water", 0, 0.0, 0, 1000.0, 100.0)
     assert water._amount == 100.0
@@ -38,6 +38,6 @@ def test_plot():
     world._simulate(tpu=100.0, end_tick=20, realtime=True)
     world._wait()
     world._updateData()
-    assert len(plot[0].data) == 1
-    assert plot[0].data[0] == xydata
-    assert xydata.plot == plot[0]
+    assert len(plot[0].sources) == 1
+    assert plot[0].sources[0] == xydata
+    assert xydata.dataset == plot[0]

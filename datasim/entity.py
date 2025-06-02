@@ -15,8 +15,6 @@ class Entity(ABC):
 
     plural: str = "Entities"
 
-    registry: Final[dict[type, int]] = {}
-
     world: Any
     id: Final[str]
     index: Final[int]
@@ -29,8 +27,8 @@ class Entity(ABC):
         world: Any,
         id: Optional[str] = None,
         initial_state: Optional["State | type[State]"] = None,
-        auto_plot: bool = False,
-        plot_id: str = "",
+        gather: bool = False,
+        data_id: str = "",
         plot_options: PlotOptions = PlotOptions(),
     ):
         """Create an entity.
@@ -43,8 +41,8 @@ class Entity(ABC):
         """
         self.world = world
         # Give the entity a serial number
-        self.index = Entity.registry.get(type(self), 0) + 1
-        Entity.registry[type(self)] = self.index
+        self.index = world._entity_registry.get(type(self), 0) + 1
+        world._entity_registry[type(self)] = self.index
         # Use the serial number as name if no name is given
         if id is None:
             id = f"{str(type(self))} {self.index:03}"
@@ -60,36 +58,38 @@ class Entity(ABC):
 
         self.ticks_in_current_state = 0
 
-        if auto_plot:
-            self.make_plot(plot_id, plot_options)
+        if gather:
+            if plot_options.auto_name:
+                plot_options.name = str(self)
+            self.add_output(data_id, plot_options)
 
         self.world.add(self)
 
-    def make_plot(
+    def add_output(
         self,
-        plot_id: str = "",
+        data_id: str = "",
         plot_options: PlotOptions = PlotOptions(),
     ):
-        """Create a plot for this Resource. Also automatically used when `auto_plot` is True at creation.
+        """Create a plot for this Resource. Also automatically used when `gather` is True at creation.
 
         Args:
             plot_type (PlotType, optional): The type of plot to add. Defaults to PlotType.line.
-            frequency (int, optional): Plot every x ticks or only on change if set to 0. Defaults to 0.
+            frequency (int, optional): Saves every x ticks or only on change if set to 0. Defaults to 0.
             plot_title (Optional[str], optional): Optional title for the plot. Defaults to None.
         """
-        from .plot import StatePlotData
+        from .dataset import StateData
 
         plot_options.plot_type = PlotType.pie
 
-        if plot_id == "":
-            plot_id = self.id
+        if data_id == "":
+            data_id = self.id
 
         if plot_options.legend_y == "":
             plot_options.legend_y = "state"
 
-        self.world.add_plot(
-            plot_id,
-            StatePlotData(self.world, self, 1, plot_options),
+        self.world.add_data(
+            data_id,
+            StateData(self.world, self, 1, plot_options),
         )
 
     def _bind_state(self, new_state: "State | type | None") -> "State | None":

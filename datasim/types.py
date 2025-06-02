@@ -30,6 +30,7 @@ class LogLevel(IntEnum):
 class PlotType(Enum):
     """The type of plot to render."""
 
+    none = "none"
     bar = "bar"
     line = "line"
     pie = "pie"
@@ -38,6 +39,8 @@ class PlotType(Enum):
     def __str__(self) -> str:
         """Get a string representation of the plot type."""
         match self:
+            case PlotType.none:
+                return "No plot"
             case PlotType.bar:
                 return "Bar chart"
             case PlotType.line:
@@ -49,11 +52,12 @@ class PlotType(Enum):
 
 
 class PlotOptions:
-    """Defines the options for plotting a PlotData."""
+    """Defines the options for plotting a Data."""
 
     title: Optional[str]
     name: Optional[str]
-    plot_type: Optional[PlotType]
+    auto_name: bool
+    plot_type: PlotType
     legend_x: str
     legend_y: str
     secondary_y: bool
@@ -119,7 +123,8 @@ class PlotOptions:
         self,
         title: Optional[str] = None,
         name: Optional[str] = None,
-        plot_type: Optional[PlotType] = None,
+        auto_name: bool = False,
+        plot_type: PlotType = PlotType.none,
         legend_x: str = "",
         legend_y: str = "",
         secondary_y: bool = False,
@@ -181,11 +186,13 @@ class PlotOptions:
         trendline_scope: str = "trace",
         trendline_color_override: Optional[Any] = None,
     ):
-        """Create Plot options.
+        """Create plot options.
 
         Args:
             title (Optional[str], optional): Title of the plot. Defaults to None.
-            name (Optional[str], optional): Name of the series. Defaults to None.
+            name (Optional[str], optional): Name of the plot source/series/trace. Defaults to None.
+            auto_name (bool, optional): Auto name the plot source/series/trace based on the source object.
+                Defaults to False.
             plot_type (Optional[PlotType], optional): TODO. Defaults to None.
             legend_x (str, optional): TODO. Defaults to "".
             legend_y (str, optional): TODO. Defaults to "".
@@ -250,6 +257,7 @@ class PlotOptions:
         """
         self.title = title
         self.name = name
+        self.auto_name = auto_name
         self.plot_type = plot_type
         self.legend_x = legend_x
         self.legend_y = legend_y
@@ -314,10 +322,10 @@ class PlotOptions:
 
     @staticmethod
     def _from_yaml(params: Dict) -> "PlotOptions":
-        if "series_color" in params:
+        if "plot_color" in params:
             if "color_discrete_sequence" not in params:
-                params["color_discrete_sequence"] = [params["series_color"]]
-            del params["series_color"]
+                params["color_discrete_sequence"] = [params["plot_color"]]
+            del params["plot_color"]
         options = PlotOptions()
         for key in params:
             options.__setattr__(key, params[key])

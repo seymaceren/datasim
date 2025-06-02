@@ -31,45 +31,45 @@ resources:
   - beds:
       resource_type: beds
       slots: 5
-      plot_id: ICU
+      data_id: ICU
       plot_options:
         title: ICU
         name: Beds in use
-        series_color: blue
+        plot_color: blue
         legend_y: beds
         secondary_y: true
   # - doctors:
   #     resource_type: doctors
   #     slots: 5
-  #     plot_id: ICU
+  #     data_id: ICU
   #     plot_options:
   #       name: Doctors active
-  #       series_color: magenta
+  #       plot_color: magenta
   #       legend_y: doctors
   #       secondary_y: true
 
 queues:
   - patients_waiting:
-      plot_id: ICU
+      data_id: ICU
       plot_options:
         name: Patients waiting
-        series_color: orange
+        plot_color: orange
         legend_y: patients
 
 quantities:
   - patients_treated:
       quantity_type: patients
       start_value: 0
-      plot_id: ICU
+      data_id: ICU
       plot_options:
         name: Patients treated
-        series_color: green
+        plot_color: green
         legend_y: patients
   - patients_died:
       quantity_type: patients
       start_value: 0
-      plot_id: ICU
+      data_id: ICU
       plot_options:
         name: Patients died
-        series_color: red
+        plot_color: red
         legend_y: patients

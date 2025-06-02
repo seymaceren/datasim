@@ -21,21 +21,24 @@ class Queue(Generic[EntityType]):
         world,
         id: str,
         capacity: int = 0,
-        auto_plot: bool = True,
-        plot_id: str = "",
-        plot_frequency: int = 1,
+        gather: bool = True,
+        data_id: str = "",
+        sample_frequency: int = 1,
         plot_options: PlotOptions = PlotOptions(),
     ):
         """Create a waiting queue for entities.
 
         Args:
+            world: The world to add this Queue to.
             id (str): Identifier / name of the queue.
             capacity (int): Maximum queue length. Defaults to 0 for no maximum.
-            auto_plot (`PlotType` or `False`, optional): Whether to automatically add a plot to the dashboard
-                for this resource, and which type of plot if so. Defaults to `PlotType.line`.
-            plot_frequency (int, optional): Whether to add a data point every `frequency` ticks.
+            gather (`PlotType` or `False`, optional): Whether to automatically gather data for the output
+                for this resource, and which type of plot if so. Defaults to `PlotType.none` to only save.
+            data_id (str, optional): id for the data source if `gather` is True. Defaults to empty string
+                which sets `data_id` to the value of this Queue's `id`.
+            sample_frequency (int, optional): Whether to add a data point every `frequency` ticks.
                 If set to `0`, adds a data point only when the quantity changes. Defaults to `1`.
-            plot_title (Optional[str], optional): An optional plot title. Defaults to `None`.
+            plot_options (Optional[PlotOptions], optional): Options for a plot. Defaults to default PlotOptions.
         """
         self.id = id
         self.world = world
@@ -45,8 +48,12 @@ class Queue(Generic[EntityType]):
 
         self.world.add(self)
 
-        if auto_plot:
-            self.make_plot(plot_id, plot_frequency, plot_options)
+        from .dataset import QueueData
+
+        self._outputs: List[QueueData] = []
+
+        if gather:
+            self.add_output(data_id, sample_frequency, plot_options)
 
     @staticmethod
     def _from_yaml(world, params: Dict) -> "Queue":
@@ -61,9 +68,9 @@ class Queue(Generic[EntityType]):
             world,
             id,
             params.get("capacity", 0),
-            params.get("auto_plot", True),
-            params.get("plot_id", ""),
-            params.get("plot_frequency", 1),
+            params.get("gather", True),
+            params.get("data_id", ""),
+            params.get("sample_frequency", 1),
             PlotOptions._from_yaml(params.get("plot_options", {})),
         )
 
@@ -80,26 +87,28 @@ class Queue(Generic[EntityType]):
         """Get the current length of the queue."""
         return self.__len__()
 
-    def make_plot(
+    def add_output(
         self,
-        plot_id: str = "",
+        data_id: str = "",
         frequency: int = 1,
         plot_options: PlotOptions = PlotOptions(),
     ):
-        """Create a plot for this Queue. Also automatically used when `auto_plot` is True at creation.
+        """Create an output source for this Queue. Also automatically used when `gather` is True at creation.
 
         Args:
-            plot_type (PlotType, optional): The type of plot to add. Defaults to PlotType.line.
-            frequency (int, optional): Plot every x ticks or only on change if set to 0. Defaults to 0.
-            plot_title (Optional[str], optional): Optional title for the plot. Defaults to None.
+            data_id (str, optional): Unique identifier of the source. Defaults to empty string which sets `data_id`
+                to the value of this Queue's `id`.
+            frequency (int, optional): Saves every x ticks or only on change if set to 0. Defaults to 0.
+            plot_options (Optional[PlotOptions], optional): Options for a plot. Defaults to default PlotOptions.
         """
-        from .plot import QueuePlotData
+        from .dataset import QueueData
 
-        if plot_id == "":
-            plot_id = self.id
+        if data_id == "":
+            data_id = self.id
 
-        self.plot = QueuePlotData(self.world, self.id, frequency, plot_options)
-        self.world.add_plot(plot_id, self.plot)
+        data = QueueData(self.world, self.id, frequency, plot_options)
+        self._outputs.append(data)
+        self.world.add_data(data_id, data)
 
     def enqueue(self, entity: EntityType, amount: Number = None) -> bool:
         """Put an entity at the end of the queue.
@@ -114,8 +123,9 @@ class Queue(Generic[EntityType]):
             bool:
                 If the entity was succesfully added to the queue.
         """
-        if hasattr(self, "plot") and self.plot.options.legend_y == "":
-            self.plot.options.legend_y = str(entity.plural).lower()
+        for output in self._outputs:
+            if output.options.legend_y == "":
+                output.options.legend_y = str(entity.plural).lower()
 
         if not self.full:
             log(

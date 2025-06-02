@@ -1,11 +1,18 @@
 """This module provides a framework for generating data by running simulations."""
 
 from .constant import Constant
-from .dashboard import Dashboard
+from .output import Output, SimpleFileOutput
 from .entity import Entity, State
 from .logging import log
-from .plot import Plot, PlotOptions, PlotData, XYPlotData, CategoryPlotData, NPPlotData
-from .plot import ResourcePlotData, QueuePlotData, StatePlotData
+from .dataset import (
+    CategoryData,
+    DataSource,
+    NPData,
+    PlotOptions,
+    Dataset,
+    XYData,
+)
+from .dataset import ResourceData, QueueData, StateData
 from .queue import Queue
 from .resource import Resource, UsingResourceState
 from .runner import Runner
@@ -14,27 +21,28 @@ from .types import LogLevel, PlotType, UseResult
 from .world import World
 
 __all__ = (
-    "CategoryPlotData",
+    "CategoryData",
     "Constant",
-    "Dashboard",
+    "DataSource",
     "Entity",
     "log",
     "LogLevel",
-    "NPPlotData",
-    "Plot",
-    "PlotData",
+    "NPData",
+    "Output",
     "PlotOptions",
     "PlotType",
     "Quantity",
     "Queue",
-    "QueuePlotData",
+    "QueueData",
     "Resource",
-    "ResourcePlotData",
+    "ResourceData",
     "Runner",
+    "Dataset",
+    "SimpleFileOutput",
     "State",
-    "StatePlotData",
+    "StateData",
     "UseResult",
     "UsingResourceState",
     "World",
-    "XYPlotData",
+    "XYData",
 )

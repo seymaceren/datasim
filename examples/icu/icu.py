@@ -25,7 +25,6 @@ class ICU(World):
         super().__init__(
             runner=runner, headless=headless, definition=definition, variation=variation
         )
-        ICU.icu = self
 
         self.load_patient_data("examples/icu/simulatiedata.csv")
 
