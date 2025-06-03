@@ -34,6 +34,8 @@ class Resource:
     _amount: Number
     changed_tick: int
 
+    _outputs: Final
+
     def __init__(
         self,
         world,
@@ -87,6 +89,10 @@ class Resource:
         self._amount = start_amount
         self.changed_tick = 0
 
+        from .dataset import ResourceData
+
+        self._outputs: List[ResourceData] = []
+
         self.world.add(self)
 
         if gather:
@@ -138,12 +144,12 @@ class Resource:
         if plot_options.legend_y == "":
             plot_options.legend_y = self.resource_type
 
-        self.world.add_data(
-            data_id,
-            ResourceData(
-                self.world, self.id, self.capacity is None, frequency, plot_options
-            ),
+        data = ResourceData(
+            self.world, self.id, self.capacity is None, frequency, plot_options
         )
+        self._outputs.append(data)
+
+        self.world.add_data(data_id, data)
 
     def _get(self) -> Number:
         return self._amount
@@ -422,6 +428,8 @@ class Resource:
 class UsingResourceState(State):
     """State in which an Entity is using a :class:`Resource`."""
 
+    type_id: str = "UsingResource"
+
     resource: Resource
 
     def __init__(self, resource: Resource, entity: Entity):
@@ -432,6 +440,7 @@ class UsingResourceState(State):
         """
         super().__init__(f"using {resource}", entity, False)
         self.resource = resource
+        self.type_id = f"Using_{resource.resource_type}"
 
     def tick(self):
         """Use the resource for one tick."""

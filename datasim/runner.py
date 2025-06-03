@@ -21,6 +21,7 @@ class Runner:
     """
 
     output: Output
+    single_world: bool
     worlds: List[World]
     title: Final[str]
     headless: bool
@@ -115,6 +116,7 @@ class Runner:
             self.output = StreamlitDashboard()
 
         self.worlds = []
+        self.single_world = len(batches) == 0
 
         for batch in batches:
             world: World = world_class_object(
@@ -122,12 +124,13 @@ class Runner:
                 headless=headless,
                 definition=definition,
                 variation=Runner._variation_string(batch),
+                variation_dict=batch,
             )
             for selector, value in batch.items():
                 world._set_variation(selector, value)
             self.worlds.append(world)
 
-        if len(batches) == 0:
+        if self.single_world:
             self.worlds.append(
                 world_class_object(self, headless=headless, definition=definition)
             )
@@ -151,6 +154,11 @@ class Runner:
             LogLevel.error,
             include_timestamp=False,
         )  # Draw terminal logo
+
+        if self.single_world:
+            log("No batches defined, created a single world.", LogLevel.verbose)
+        else:
+            log(f"Created {len(batches)} worlds.", LogLevel.verbose)
 
     @staticmethod
     def _variation_string(variations: Dict[str, Value]):
@@ -213,6 +221,8 @@ class Runner:
 
         if self.headless:
             self._draw()
+
+        self.output.aggregate_batches(self.worlds)
 
         if self.auto_output_path:
             self.output._save(

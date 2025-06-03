@@ -1,10 +1,11 @@
 from abc import ABC
 from ordered_set import OrderedSet
+import pandas as pd
 from psutil import Process
 from os import getpid
 from threading import Thread
 from time import sleep
-from typing import Any, Dict, Final, Optional, Tuple
+from typing import Any, Dict, Final, List, Optional, Tuple
 
 from .constant import Constant
 from .output import Output
@@ -40,6 +41,7 @@ class World(ABC):
     quantities: Final[Dict[str, Quantity]]
     stopped: bool = False
     variation: Final[Optional[str]]
+    variation_dict: Final[Optional[Dict[str, Any]]]
 
     """Number of ticks elapsed in the current simulation."""
     ticks: int = 0
@@ -66,6 +68,7 @@ class World(ABC):
         headless: bool = False,
         definition: Optional[Dict] = None,
         variation: Optional[str] = None,
+        variation_dict: Optional[Dict[str, Any]] = None,
     ):
         """Create the simulation world.
 
@@ -74,11 +77,17 @@ class World(ABC):
             tps (float, optional): Ticks per second (only in simulation time,
                 unless running :meth:`simulate()` with `realtime=True`). Defaults to 10.0.
         """
-        if not hasattr(World, "_registry"):
+        try:
+            _ = World._registry
+        except Exception:
             World._by_index: Dict[int, World] = {}
-            World._registry: Dict[World, int] = {}
-        self.index = World._registry.get(self, 0) + 1
-        World._registry[self] = self.index
+            World._registry: List[World] = []
+        self.index = (
+            World._registry.index(self)
+            if self in World._registry
+            else len(World._registry)
+        )
+        World._registry.append(self)
         World._by_index[self.index] = self
 
         self.runner = runner
@@ -102,7 +111,7 @@ class World(ABC):
                 headless = definition["headless"]
 
         self.active = True
-        self.title = title
+        self.title = title if self.runner.single_world else f"{title} {self.index}"
         self.entities = OrderedSet[Entity]([])
         self._entity_dict = {}
         self.datasets = {}
@@ -118,6 +127,7 @@ class World(ABC):
         self.headless = headless
 
         self.variation = variation
+        self.variation_dict = variation_dict
 
         if definition:
             if "constants" in definition:
@@ -189,10 +199,17 @@ class World(ABC):
                 self.constants.pop(obj.id)
             elif isinstance(obj, Entity):
                 self.entities.remove(obj)
+                self._entity_dict.pop(obj.id)
+                for output in obj._outputs:
+                    output._stop()
             elif isinstance(obj, Resource):
                 self.resources.pop(obj.id)
+                for output in obj._outputs:
+                    output._stop()
             elif isinstance(obj, Queue):
                 self.queues.pop(obj.id)
+                for output in obj._outputs:
+                    output._stop()
             elif isinstance(obj, Quantity):
                 self.quantities.pop(obj.id)
         except Exception:
@@ -343,6 +360,14 @@ class World(ABC):
 
         self.update_time = 0.0
 
+        for id, aggregated in self.aggregate_data().items():
+            self.output.dataframes[self.index][id] = aggregated
+            self.output.dataframe_names[self.index][id] = (
+                f"{self.title} - {id} - {self.variation.replace(":", ".")}"
+                if self.variation
+                else ""
+            )
+
         # TODO fix threading
         if self.stop_server:
             sleep(10)
@@ -351,6 +376,7 @@ class World(ABC):
             p.terminate()
 
     def _updateData(self):
+        log(f"Updating {len(self.datasets)} datasets...", LogLevel.verbose)
         for dataset in self.datasets.values():
             dataset._update()
 
@@ -363,3 +389,9 @@ class World(ABC):
             index = self.datasets[dataset_id].add_source(source)
 
         return (self.datasets[dataset_id], index)
+
+    def aggregate_data(self) -> Dict[str, pd.DataFrame]:
+        return {}
+
+    def get_aggregate_datapoints(self) -> Dict[str, Any]:
+        return {}

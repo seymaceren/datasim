@@ -3,6 +3,7 @@ from datasim import Entity, log, LogLevel, PlotOptions, State, UsingResourceStat
 
 
 class WaitingPatientState(State):
+    type_id: str = "Waiting"
     patient: "Patient"
 
     def __init__(self, _name, patient: "Patient"):
@@ -33,6 +34,7 @@ class WaitingPatientState(State):
 
 
 class TreatedPatientState(State):
+    type_id: str = "Treated"
 
     def __init__(self, _name, entity):
         super().__init__("Treated", entity)
@@ -48,6 +50,7 @@ class TreatedPatientState(State):
 
 
 class DiedPatientState(State):
+    type_id: str = "Died"
 
     def __init__(self, _name, patient: "Patient"):
         super().__init__("Died", patient)

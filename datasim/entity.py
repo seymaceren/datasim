@@ -1,5 +1,5 @@
 from abc import ABC
-from typing import Any, Final, Optional, Self
+from typing import Any, Final, List, Optional, Self
 
 import numpy as np
 
@@ -19,6 +19,7 @@ class Entity(ABC):
     id: Final[str]
     index: Final[int]
     _state: "State | None" = None
+    _outputs: Final
     ticks_in_current_state: int
     location: Optional[np.typing.NDArray[np.float64]]
 
@@ -58,6 +59,10 @@ class Entity(ABC):
 
         self.ticks_in_current_state = 0
 
+        from .dataset import StateData
+
+        self._outputs: List[StateData] = []
+
         if gather:
             if plot_options.auto_name:
                 plot_options.name = str(self)
@@ -82,15 +87,18 @@ class Entity(ABC):
         plot_options.plot_type = PlotType.pie
 
         if data_id == "":
-            data_id = self.id
+            data_id = str(self)
 
         if plot_options.legend_y == "":
             plot_options.legend_y = "state"
 
         self.world.add_data(
             data_id,
-            StateData(self.world, self, 1, plot_options),
+            StateData(self.world, self, 0, plot_options),
         )
+
+    def _link_output(self, data_source):
+        self._outputs.append(data_source)
 
     def _bind_state(self, new_state: "State | type | None") -> "State | None":
         if new_state is None:
@@ -214,6 +222,7 @@ class State(ABC):
     name: str
     completed: bool | None
     switch_to: Self | None
+    type_id: str = "State (base class!)"
 
     def __init__(
         self,

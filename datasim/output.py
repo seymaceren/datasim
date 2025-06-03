@@ -4,6 +4,8 @@ from pandas import DataFrame
 import pickle
 from typing import Dict, List, Literal, Tuple
 
+import pandas as pd
+
 from .logging import log
 from .types import LogLevel
 
@@ -22,6 +24,22 @@ class Output(ABC):
     def _add_world(self, world: int):
         self.dataframes[world] = {}
         self.dataframe_names[world] = {}
+
+    def aggregate_batches(self, worlds: List):
+        from .world import World
+
+        aggregated_data = []
+        for world in worlds:
+            if not isinstance(world, World):
+                continue
+            aggregated_data.append(world.get_aggregate_datapoints())
+
+        result = pd.DataFrame(
+            aggregated_data,
+            columns=list(aggregated_data[0].keys()),
+        )
+        self.dataframes[-1] = {"Aggregated": result}
+        self.dataframe_names[-1] = {"Aggregated": "Aggregated"}
 
     def export_pickle(self, world: int, source_id: str) -> Tuple[str, bytes]:
         """Export the data from a source to pickle format.
@@ -47,7 +65,7 @@ class Output(ABC):
         """
         return (
             f"{self.dataframe_names[world][source_id]}.csv",
-            self.dataframes[world][source_id].to_csv(),
+            self.dataframes[world][source_id].to_csv(index=False),
         )
 
     def _clear(self, world: int):

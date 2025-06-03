@@ -1,23 +1,25 @@
 from abc import ABC
-from typing import Any, Final, List, Optional
+from typing import Final, List, Optional
 from pandas import DataFrame
 
 import numpy as np
 
-from .output import Output
 from .entity import Entity
+from .logging import log
+from .output import Output
 from .queue import Queue
 from .resource import Resource
-from .types import PlotOptions
+from .types import LogLevel, PlotOptions
 
 
 class DataSource(ABC):
     """Abstract superclass of different types of data to save and/or plot."""
 
     world: Final
-    dataset: Optional[Any] = None
+    dataset: Optional["Dataset"] = None
     set_index: Optional[int] = 0
     options: PlotOptions
+    _stopped: bool = False
 
     def __init__(
         self,
@@ -58,6 +60,10 @@ class DataSource(ABC):
 
     def _tick(self):
         pass
+
+    def _stop(self):
+        self._tick()
+        self._stopped = True
 
 
 class XYData(DataSource):
@@ -214,8 +220,11 @@ class ResourceData(DataSource):
         self.frequency = frequency
 
     def _tick(self):
+        if self._stopped:
+            return
+
         if (self.frequency == 0 and self.source.changed_tick == self.world.ticks) or (
-            self.world.ticks % self.frequency == 0
+            self.frequency > 0 and self.world.ticks % self.frequency == 0
         ):
             if len(self._x_buffer) <= self._buffer_index:
                 self._x_buffer = np.append(self._x_buffer, np.zeros(self._buffer_size))
@@ -259,8 +268,11 @@ class QueueData(DataSource):
         self.frequency = frequency
 
     def _tick(self):
+        if self._stopped:
+            return
+
         if (self.frequency == 0 and self.source.changed_tick == self.world.ticks) or (
-            self.world.ticks % self.frequency == 0
+            self.frequency > 0 and self.world.ticks % self.frequency == 0
         ):
             if len(self._x_buffer) <= self._buffer_index:
                 self._x_buffer = np.append(self._x_buffer, np.zeros(self._buffer_size))
@@ -299,20 +311,24 @@ class StateData(DataSource):
             plot_options.legend_y = "state"
         super().__init__(world, plot_options)
         self.source = source
+        self.source._link_output(self)
         self.frequency = frequency
-        self._y_buffer = np.full(self._buffer_size, "")
+        self._y_buffer = np.full(self._buffer_size, "", dtype=object)
 
     def _tick(self):
-        if (self.frequency == 0 and self.source.ticks_in_current_state == 1) or (
-            self.world.ticks % self.frequency == 0
+        if self._stopped:
+            return
+
+        if (self.frequency == 0 and self.source.ticks_in_current_state <= 1) or (
+            self.frequency > 0 and self.world.ticks % self.frequency == 0
         ):
             if len(self._x_buffer) <= self._buffer_index:
                 self._x_buffer = np.append(self._x_buffer, np.zeros(self._buffer_size))
                 self._y_buffer = np.append(
-                    self._y_buffer, np.full(self._buffer_size, "")
+                    self._y_buffer, np.full(self._buffer_size, "", dtype=object)
                 )
             self._x_buffer[self._buffer_index] = self.world.time
-            self._y_buffer[self._buffer_index] = self.source.state.name
+            self._y_buffer[self._buffer_index] = self.source.state.type_id
             self._buffer_index += 1
 
 
@@ -375,8 +391,24 @@ class Dataset:
         self.sources.append(source)
         return source.set_index
 
+    def remove_source(self, source: DataSource):
+        """Remove a data source from the set.
+
+        Args:
+            data (Data): Data source.
+        Raises:
+            ReferenceError: In case of a DataSource set or index mismatch.
+        """
+        index = source.set_index
+        if source.dataset != self or index is None or self.sources[index] != source:
+            raise ReferenceError("Integrity failure: Data source or index mismatch!")
+        self.sources.remove(source)
+        for new_index in range(index, len(self.sources)):
+            self.sources[new_index].set_index = new_index
+
     def _update(self):
         for source in self.sources:
+            log(f"- Updating: {source.options.name}...", LogLevel.verbose)
             source._update_trace()
             self.output._add_source(
                 self.world.index,
@@ -387,7 +419,7 @@ class Dataset:
 
         self.output.dataframes[self.world.index][self.id] = DataFrame()
         self.output.dataframe_names[self.world.index][self.id] = (
-            self.world.title + f" - {self.world.variation}"
+            f"{self.world.title} - {self.id} - {self.world.variation.replace(":", ".")}"
             if self.world.variation
             else ""
         )

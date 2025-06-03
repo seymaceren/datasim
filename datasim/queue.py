@@ -15,6 +15,7 @@ class Queue(Generic[EntityType]):
     queue: Final[List[Tuple[EntityType, Number]]]
     capacity: int
     changed_tick: int
+    _outputs: Final
 
     def __init__(
         self,
