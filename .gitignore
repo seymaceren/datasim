@@ -255,3 +255,5 @@ docs/build/doctrees/
 docs/source/_static/
 docs/source/_templates/
 docs/source/generated/
+
+output/
