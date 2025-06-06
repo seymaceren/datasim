@@ -120,27 +120,3 @@ class ICU(World):
                 ],
             )
         }
-
-    def get_aggregate_datapoints(self) -> Dict[str, Any]:
-        if self.variation_dict is None:
-            return {}
-        data = self.variation_dict.copy()
-
-        beds = self.output.dataframes[self.index]["ICU"]["Beds in use"].describe()
-        waiting = self.output.dataframes[self.index]["ICU"][
-            "Patients waiting"
-        ].describe()
-        treated = self.output.dataframes[self.index]["ICU"][
-            "Patients treated"
-        ].describe()
-        died = self.output.dataframes[self.index]["ICU"]["Patients died"].describe()
-        for key, item in beds.items():
-            data[f"beds_in_use_{key}"] = item
-        for key, item in waiting.items():
-            data[f"patients_waiting{key}"] = item
-        for key, item in treated.items():
-            data[f"patients_treated{key}"] = item
-        for key, item in died.items():
-            data[f"patients_died{key}"] = item
-
-        return data

@@ -34,12 +34,23 @@ class Output(ABC):
                 continue
             aggregated_data.append(world.get_aggregate_datapoints())
 
-        result = pd.DataFrame(
-            aggregated_data,
-            columns=list(aggregated_data[0].keys()),
-        )
-        self.dataframes[-1] = {"Aggregated": result}
-        self.dataframe_names[-1] = {"Aggregated": "Aggregated"}
+        set_data = {}
+        for set_name in aggregated_data[0]:
+            set_data[set_name] = []
+            for world_data in aggregated_data:
+                set_data[set_name].append(world_data[set_name])
+
+        neg_i = -1
+
+        for set_name, data in set_data.items():
+            result = pd.DataFrame(
+                data,
+                columns=list(data[0].keys()),
+            )
+
+            self.dataframes[neg_i] = {"Aggregated": result}
+            self.dataframe_names[neg_i] = {"Aggregated": f"{set_name} - Aggregated"}
+            neg_i -= 1
 
     def export_pickle(self, world: int, source_id: str) -> Tuple[str, bytes]:
         """Export the data from a source to pickle format.
@@ -108,9 +119,6 @@ class SimpleFileOutput(Output):
                 self.export_all_pickle(directory)
             case "csv":
                 self.export_all_csv(directory)
-
-    def _select_world(self, worlds) -> List[int]:
-        return list(range(len(worlds)))
 
     def export_all_pickle(self, directory: str):
         """Export all sources as .pickle files.

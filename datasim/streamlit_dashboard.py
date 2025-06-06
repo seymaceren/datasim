@@ -296,7 +296,7 @@ class StreamlitDashboard(Output):
                 source.set_index
             ]["data"]:
                 data["showlegend"] = True  # type: ignore
-                data["name"] = data.options.name  # type: ignore
+                data["name"] = source.options.name  # type: ignore
                 self.plots[source.world.index][source.dataset.id].add_traces([data])
 
         # Part 2: TODO check if other timing needed

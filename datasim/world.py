@@ -393,5 +393,16 @@ class World(ABC):
     def aggregate_data(self) -> Dict[str, pd.DataFrame]:
         return {}
 
-    def get_aggregate_datapoints(self) -> Dict[str, Any]:
-        return {}
+    def get_aggregate_datapoints(self) -> Dict[str, Dict[str, Any]]:
+        if self.variation_dict is None:
+            return {}
+        data = {}
+
+        for set_name, frame in self.output.dataframes[self.index].items():
+            data[set_name] = self.variation_dict.copy()
+
+            for col in frame.columns:
+                for key, item in frame[col].describe().items():
+                    data[set_name][f"{col}_{key}"] = item
+
+        return data

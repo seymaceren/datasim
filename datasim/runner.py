@@ -219,8 +219,7 @@ class Runner:
             LogLevel.debug,
         )
 
-        if self.headless:
-            self._draw()
+        self._draw(True)
 
         self.output.aggregate_batches(self.worlds)
 
@@ -259,8 +258,11 @@ class Runner:
         for world in self.worlds:
             world._wait()
 
-    def _draw(self):
-        worlds = self.output._select_world(self.worlds)
+    def _draw(self, calculate_all: bool = False):
+        if calculate_all:
+            worlds = list(range(len(self.worlds)))
+        else:
+            worlds = self.output._select_world(self.worlds)
 
         if self.output:
             for world in worlds:
