@@ -2,7 +2,7 @@ from typing import Dict, Final, Generic, List, Tuple, TypeVar
 
 from .entity import Entity
 from .logging import log
-from .types import LogLevel, Number, PlotOptions
+from .types import LogLevel, Number, PlotOptions, PlotType
 
 EntityType = TypeVar("EntityType", bound=Entity)
 
@@ -104,6 +104,10 @@ class Queue(Generic[EntityType]):
         """
         from .dataset import QueueData
 
+        if plot_options.aggregate_only:
+            plot_options.plot_type = PlotType.none
+        elif plot_options.plot_type == PlotType.none:
+            plot_options.plot_type = PlotType.line
         if data_id == "":
             data_id = self.id
 

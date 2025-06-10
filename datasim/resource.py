@@ -3,7 +3,7 @@ from typing import Dict, Final, List, Optional, Self, Tuple
 from .entity import Entity, State
 from .logging import log
 from .queue import Queue
-from .types import LogLevel, Number, PlotOptions, UseResult
+from .types import LogLevel, Number, PlotOptions, PlotType, UseResult
 
 
 class Resource:
@@ -141,6 +141,10 @@ class Resource:
         if data_id == "":
             data_id = self.id
 
+        if plot_options.aggregate_only:
+            plot_options.plot_type = PlotType.none
+        elif plot_options.plot_type == PlotType.none:
+            plot_options.plot_type = PlotType.line
         if plot_options.legend_y == "":
             plot_options.legend_y = self.resource_type
 

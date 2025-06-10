@@ -35,10 +35,6 @@ class DataSource(ABC):
         """
         self.world = world
 
-        if plot_options.legend_x == "":
-            plot_options.legend_x = "x"
-        if plot_options.legend_y == "":
-            plot_options.legend_y = "y"
         self.options = plot_options
 
         self._buffer_size = max(10000, self.world.end_tick)
@@ -64,6 +60,36 @@ class DataSource(ABC):
     def _stop(self):
         self._tick()
         self._stopped = True
+
+
+class DataFrameData(DataSource):
+    """Data directly from a Pandas DataFrame."""
+
+    data: DataFrame
+
+    def __init__(
+        self,
+        world,
+        data: DataFrame,
+        plot_options: PlotOptions = PlotOptions(),
+    ):
+        """Create a data source directly referencing a Pandas DataFrame.
+
+        Args:
+            world: The `World` this data belongs to.
+            data (:class:`pd.DataFrame`): The DataFrame.
+            plot_options (Optional[PlotOptions], optional): Options for a plot.
+                Defaults to default PlotOptions which means nothing will be plotted.
+
+        Raises:
+            `TypeError`: When trying to take from a capacity resource without specifying an amount.
+        """
+        super().__init__(world, plot_options)
+        self.data = data
+
+    @property
+    def _data_frame(self):
+        return self.data
 
 
 class XYData(DataSource):
@@ -340,6 +366,7 @@ class Dataset:
     title: Optional[str]
     sources: List[DataSource]
     output: Output
+    _gathered: bool = False
 
     def __init__(self, world, id: str, *args: DataSource):
         """Create a dataset to add to the output using `World.add_data()`.
@@ -408,8 +435,9 @@ class Dataset:
 
     def _update(self):
         for source in self.sources:
-            log(f"- Updating: {source.options.name}...", LogLevel.verbose)
-            source._update_trace()
+            if not self._gathered:
+                log(f"- Updating: {source.options.name}...", LogLevel.verbose)
+                source._update_trace()
             self.output._add_source(
                 self.world.index,
                 self.id,
@@ -429,7 +457,8 @@ class Dataset:
                 self.output._update_source(source)
 
                 dataframe = source._data_frame.copy()
-                dataframe.columns = [self.world.time_unit, source.options.name]
+                if len(dataframe.columns) == 2:
+                    dataframe.columns = [self.world.time_unit, source.options.name]
                 if self.output.dataframes[self.world.index][self.id].empty:
                     self.output.dataframes[self.world.index][self.id] = dataframe
                 else:
@@ -438,3 +467,5 @@ class Dataset:
                             dataframe, on=self.world.time_unit, how="outer"
                         )
                     )
+
+        self._gathered = True

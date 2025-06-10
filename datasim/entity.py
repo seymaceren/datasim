@@ -84,7 +84,10 @@ class Entity(ABC):
         """
         from .dataset import StateData
 
-        plot_options.plot_type = PlotType.pie
+        if plot_options.aggregate_only:
+            plot_options.plot_type = PlotType.none
+        elif plot_options.plot_type == PlotType.none:
+            plot_options.plot_type = PlotType.pie
 
         if data_id == "":
             data_id = str(self)

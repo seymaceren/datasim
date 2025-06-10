@@ -2,7 +2,7 @@ import plotly.express as px
 from plotly.graph_objs._figure import Figure
 from plotly.subplots import make_subplots
 from plotly.colors import convert_colors_to_same_type, unlabel_rgb
-from typing import Dict, List
+from typing import Dict, List, Optional
 import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
 from webcolors import name_to_rgb
@@ -41,7 +41,9 @@ class StreamlitDashboard(Output):
     def _clear(self, world: int):
         self.plots[world].clear()
 
-    def _add_source(self, world: int, source_id: str, legend_x: str, secondary_y: bool):
+    def _add_source(
+        self, world: int, source_id: str, legend_x: Optional[str], secondary_y: bool
+    ):
         if world not in self.plots:
             self.plots[world] = {}
         if source_id not in self.plots[world]:
@@ -70,7 +72,11 @@ class StreamlitDashboard(Output):
                     source._data_frame,
                     title=source.options.title,
                     x=source.options.legend_x,
-                    y=source.options.legend_y,
+                    y=(
+                        source._data_frame.columns[1]
+                        if source.options.legend_y is None
+                        else source.options.legend_y
+                    ),
                     color=source.options.color,
                     color_continuous_scale=source.options.color_continuous_scale,
                     color_continuous_midpoint=source.options.color_continuous_midpoint,
@@ -94,7 +100,7 @@ class StreamlitDashboard(Output):
                     labels=(
                         source.options.labels
                         or {source.options.legend_y: source.options.name}
-                        if source.options.name
+                        if source.options.name and source.options.legend_y != ""
                         else None
                     ),
                     orientation=source.options.orientation,
@@ -335,37 +341,36 @@ class StreamlitDashboard(Output):
         if self.world_index not in self.plots:
             return
         for source_id in self.plots[self.world_index]:
-            if source_id not in self.frames[self.world_index]:
-                self.frames[self.world_index][source_id] = st.empty()
-
-            log(f"Update plot {source_id}", LogLevel.verbose)
-
-            with self.frames[self.world_index][source_id].container():
-                st.plotly_chart(self.plots[self.world_index][source_id])
-
+            self._draw_plot(self.world_index, source_id)
+            for index in self.plots:
                 if (
-                    st.pills(
-                        "Format",
-                        ["Pickle", "CSV"],
-                        default="Pickle",
-                        label_visibility="hidden",
-                    )
-                    == "Pickle"
+                    index < 0
+                    and Output.aggregated_title(source_id) in self.plots[index]
                 ):
-                    path, file = self.export_pickle(self.world_index, source_id)
-                    st.download_button(
-                        label="Download data",
-                        data=file,
-                        file_name=path,
-                        mime="application/octet-stream",
-                        icon=":material/download:",
-                    )
-                else:
-                    path, file = self.export_csv(self.world_index, source_id)
-                    st.download_button(
-                        label="Download data",
-                        data=file,
-                        file_name=path,
-                        mime="text/csv",
-                        icon=":material/download:",
-                    )
+                    self._draw_plot(index, Output.aggregated_title(source_id))
+
+    def _draw_plot(self, world_index, source_id):
+        if source_id not in self.frames[world_index]:
+            self.frames[world_index][source_id] = st.empty()
+
+        log(f"Update plot {source_id}", LogLevel.verbose)
+
+        with self.frames[world_index][source_id].container():
+            st.plotly_chart(self.plots[world_index][source_id])
+
+            path_p, file_p = self.export_pickle(world_index, source_id)
+            st.download_button(
+                label="Pickle",
+                data=file_p,
+                file_name=path_p,
+                mime="application/octet-stream",
+                icon=":material/download:",
+            )
+            path_c, file_c = self.export_csv(world_index, source_id)
+            st.download_button(
+                label="CSV",
+                data=file_c,
+                file_name=path_c,
+                mime="text/csv",
+                icon=":material/download:",
+            )

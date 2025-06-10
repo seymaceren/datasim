@@ -1,7 +1,7 @@
 from typing import Dict, Final, List, Self, Tuple
 
 from .dataset import PlotOptions, XYData
-from .types import Number
+from .types import Number, PlotType
 
 
 class Quantity:
@@ -105,6 +105,10 @@ class Quantity:
         if data_id == "":
             data_id = self.id
 
+        if plot_options.aggregate_only:
+            plot_options.plot_type = PlotType.none
+        elif plot_options.plot_type == PlotType.none:
+            plot_options.plot_type = PlotType.line
         if plot_options.legend_x == "":
             plot_options.legend_x = self.world.time_unit
         if plot_options.legend_y == "":

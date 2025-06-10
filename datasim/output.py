@@ -2,12 +2,12 @@ from abc import ABC
 from os import mkdir, path
 from pandas import DataFrame
 import pickle
-from typing import Dict, List, Literal, Tuple
+from typing import Dict, List, Literal, Optional, Tuple
 
 import pandas as pd
 
 from .logging import log
-from .types import LogLevel
+from .types import LogLevel, PlotOptions, PlotType
 
 
 class Output(ABC):
@@ -24,6 +24,10 @@ class Output(ABC):
     def _add_world(self, world: int):
         self.dataframes[world] = {}
         self.dataframe_names[world] = {}
+
+    @staticmethod
+    def aggregated_title(set_name):
+        return f"{set_name} - Aggregated"
 
     def aggregate_batches(self, worlds: List):
         from .world import World
@@ -42,14 +46,38 @@ class Output(ABC):
 
         neg_i = -1
 
+        from .dataset import DataFrameData, Dataset
+
         for set_name, data in set_data.items():
+            if neg_i not in self.dataframes:
+                self._add_world(neg_i)
+
+            self._clear(neg_i)
+
             result = pd.DataFrame(
                 data,
                 columns=list(data[0].keys()),
             )
 
-            self.dataframes[neg_i] = {"Aggregated": result}
-            self.dataframe_names[neg_i] = {"Aggregated": f"{set_name} - Aggregated"}
+            key = Output.aggregated_title(set_name)
+            self.dataframes[neg_i] = {key: result}
+            self.dataframe_names[neg_i] = {key: key}
+
+            source = DataFrameData(
+                worlds[0],
+                result,
+                PlotOptions(
+                    plot_type=PlotType.bar,
+                    barmode="group",
+                    title=key,
+                    name=key,
+                    legend_x="Run",
+                    legend_y=None,
+                ),
+            )
+            aggregate_data: Dataset = Dataset(worlds[0], key, source)
+            aggregate_data._update()
+
             neg_i -= 1
 
     def export_pickle(self, world: int, source_id: str) -> Tuple[str, bytes]:
@@ -82,7 +110,9 @@ class Output(ABC):
     def _clear(self, world: int):
         pass
 
-    def _add_source(self, world: int, source_id: str, legend_x: str, secondary_y: bool):
+    def _add_source(
+        self, world: int, source_id: str, legend_x: Optional[str], secondary_y: bool
+    ):
         pass
 
     def _update_trace(self, source):

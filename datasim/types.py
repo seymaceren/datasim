@@ -57,9 +57,10 @@ class PlotOptions:
     title: Optional[str]
     name: Optional[str]
     auto_name: bool
+    aggregate_only: bool
     plot_type: PlotType
-    legend_x: str
-    legend_y: str
+    legend_x: Optional[str]
+    legend_y: Optional[str]
     secondary_y: bool
     color: Optional[str]
     color_continuous_scale: Optional[Any]
@@ -124,9 +125,10 @@ class PlotOptions:
         title: Optional[str] = None,
         name: Optional[str] = None,
         auto_name: bool = False,
+        aggregate_only: bool = False,
         plot_type: PlotType = PlotType.none,
-        legend_x: str = "",
-        legend_y: str = "",
+        legend_x: Optional[str] = "",
+        legend_y: Optional[str] = "",
         secondary_y: bool = False,
         color: Optional[str] = None,
         color_continuous_scale: Optional[Any] = None,
@@ -193,6 +195,7 @@ class PlotOptions:
             name (Optional[str], optional): Name of the plot source/series/trace. Defaults to None.
             auto_name (bool, optional): Auto name the plot source/series/trace based on the source object.
                 Defaults to False.
+            aggregate_only (bool, optional): Only make aggregate plots for this data. Defaults to False.
             plot_type (Optional[PlotType], optional): TODO. Defaults to None.
             legend_x (str, optional): TODO. Defaults to "".
             legend_y (str, optional): TODO. Defaults to "".
@@ -258,6 +261,7 @@ class PlotOptions:
         self.title = title
         self.name = name
         self.auto_name = auto_name
+        self.aggregate_only = aggregate_only
         self.plot_type = plot_type
         self.legend_x = legend_x
         self.legend_y = legend_y

@@ -8,8 +8,14 @@
       "name": "Debug with Streamlit",
       "type": "debugpy",
       "request": "launch",
-      "program": "main.py",
+      "module": "streamlit",
       "args": [
+        "run",
+        "datasim.py",
+        "--server.port",
+        "2000",
+        "--",
+        "-v",
         "world=examples.icu.icu.ICU"
       ],
       "cwd": "${workspaceFolder}",
@@ -19,7 +25,7 @@
       "name": "Debug without Streamlit",
       "type": "debugpy",
       "request": "launch",
-      "program": "sim_main.py",
+      "program": "datasim.py",
       "args": [
         "-v",
         "world=examples.icu.icu.ICU",

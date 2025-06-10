@@ -171,7 +171,7 @@ class Runner:
         restart: bool = False,
         realtime: bool = False,
         stop_server: bool = False,
-    ) -> bool:
+    ):
         """Run the simulation for all worlds.
 
         Args:
@@ -202,16 +202,18 @@ class Runner:
             self.control_thread = Thread(target=self._check_active)
             self.control_thread.start()
 
-        return self.active
+        self.control_thread.join()
+        self._finish()
 
     def _check_active(self):
         while True:
             sleep(1.0)
             if not self.active:
                 break
-        self._finish()
 
     def _finish(self):
+        self.wait()
+
         log(
             f"\n▟{"▀"*(4+len(self.title))}▜▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▙\n"
             + f"█  {self.title}  ▐  End of simulation  █\n"
@@ -219,7 +221,7 @@ class Runner:
             LogLevel.debug,
         )
 
-        self._draw(True)
+        self._gather(True)
 
         self.output.aggregate_batches(self.worlds)
 
@@ -227,6 +229,8 @@ class Runner:
             self.output._save(
                 self.auto_output_path, "csv" if self.auto_output_csv else "pickle"
             )
+
+        self._draw()
 
     @property
     def active(self):
@@ -258,7 +262,7 @@ class Runner:
         for world in self.worlds:
             world._wait()
 
-    def _draw(self, calculate_all: bool = False):
+    def _gather(self, calculate_all: bool = False):
         if calculate_all:
             worlds = list(range(len(self.worlds)))
         else:
@@ -271,5 +275,7 @@ class Runner:
         for world in worlds:
             self.worlds[world]._updateData()
 
+    def _draw(self):
+        self.output._select_world(self.worlds)
         if self.output:
             self.output._draw()

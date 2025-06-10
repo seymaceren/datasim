@@ -399,7 +399,8 @@ class World(ABC):
         data = {}
 
         for set_name, frame in self.output.dataframes[self.index].items():
-            data[set_name] = self.variation_dict.copy()
+            data[set_name] = {"Run": self.variation}
+            data[set_name].update(self.variation_dict)
 
             for col in frame.columns:
                 for key, item in frame[col].describe().items():

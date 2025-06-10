@@ -1,5 +1,5 @@
 from importlib import import_module
-from sys import argv
+from sys import argv, modules
 
 from datasim import logging, LogLevel, Runner
 
@@ -17,7 +17,7 @@ for arg in argv:
 
 if not world_class:
     print(
-        """Usage: [streamlit run]/[python] sim_main.py [options] world=<classname>
+        """Usage: [streamlit run]/[python] datasim.py [options] world=<classname>
     classname: specify the main World class
 
     Options:
@@ -51,7 +51,7 @@ elif "-d" in argv or "--debug" in argv:
 output_csv = "-c" in argv or "--csv" in argv
 
 
-if "streamlit" in argv:
+if "streamlit" in modules:
     import streamlit as st
 
     if "runner" not in st.session_state:
