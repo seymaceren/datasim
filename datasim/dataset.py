@@ -9,7 +9,7 @@ from .logging import log
 from .output import Output
 from .queue import Queue
 from .resource import Resource
-from .types import LogLevel, PlotOptions
+from .types import LogLevel, PlotOptions, PlotType
 
 
 class DataSource(ABC):
@@ -438,12 +438,13 @@ class Dataset:
             if not self._gathered:
                 log(f"- Updating: {source.options.name}...", LogLevel.verbose)
                 source._update_trace()
-            self.output._add_source(
-                self.world.index,
-                self.id,
-                source.options.legend_x,
-                source.options.secondary_y,
-            )
+            if source.options.plot_type not in (PlotType.none, PlotType.export_only):
+                self.output._add_source(
+                    self.world.index,
+                    self.id,
+                    source.options.legend_x,
+                    source.options.secondary_y,
+                )
 
         self.output.dataframes[self.world.index][self.id] = DataFrame()
         self.output.dataframe_names[self.world.index][self.id] = (

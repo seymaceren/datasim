@@ -160,6 +160,8 @@ class Runner:
         else:
             log(f"Created {len(batches)} worlds.", LogLevel.verbose)
 
+        Runner.no_world = World(self, "NO_INDEX")
+
     @staticmethod
     def _variation_string(variations: Dict[str, Value]):
         return ", ".join([f"{k}={v}" for k, v in variations.items()])

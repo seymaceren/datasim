@@ -34,7 +34,7 @@ class Output(ABC):
 
         aggregated_data = []
         for world in worlds:
-            if not isinstance(world, World):
+            if not isinstance(world, World) or world.index < 0:
                 continue
             aggregated_data.append(world.get_aggregate_datapoints())
 
@@ -63,19 +63,14 @@ class Output(ABC):
             self.dataframes[neg_i] = {key: result}
             self.dataframe_names[neg_i] = {key: key}
 
+            from .runner import Runner
+
             source = DataFrameData(
-                worlds[0],
+                Runner.no_world,
                 result,
-                PlotOptions(
-                    plot_type=PlotType.bar,
-                    barmode="group",
-                    title=key,
-                    name=key,
-                    legend_x="Run",
-                    legend_y=None,
-                ),
+                PlotOptions(plot_type=PlotType.export_only, name=key),
             )
-            aggregate_data: Dataset = Dataset(worlds[0], key, source)
+            aggregate_data: Dataset = Dataset(Runner.no_world, key, source)
             aggregate_data._update()
 
             neg_i -= 1

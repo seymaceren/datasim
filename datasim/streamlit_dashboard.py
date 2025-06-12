@@ -2,11 +2,10 @@ import plotly.express as px
 from plotly.graph_objs._figure import Figure
 from plotly.subplots import make_subplots
 from plotly.colors import convert_colors_to_same_type, unlabel_rgb
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
 from webcolors import name_to_rgb
-
 
 from .output import Output
 from .logging import log
@@ -17,6 +16,7 @@ class StreamlitDashboard(Output):
     """Dashboard using Streamlit."""
 
     plots: Dict[int, Dict[str, Figure]]
+    sources: Dict[int, Dict[str, Dict[int, Any]]]
     traces: Dict[int, Dict[str, Dict[int, Figure]]]
     frames: Dict[int, Dict[str, DeltaGenerator]]
     world_index: int
@@ -26,6 +26,7 @@ class StreamlitDashboard(Output):
         st.session_state.dashboard = self
 
         self.plots = {}
+        self.sources = {}
         self.traces = {}
         self.frames = {}
         self.world_index = 0
@@ -35,6 +36,7 @@ class StreamlitDashboard(Output):
     def _add_world(self, world: int):
         super()._add_world(world)
         self.plots[world] = {}
+        self.sources[world] = {}
         self.traces[world] = {}
         self.frames[world] = {}
 
@@ -65,6 +67,12 @@ class StreamlitDashboard(Output):
             self.traces[source.world.index] = {}
         if source.dataset.id not in self.traces[source.world.index]:
             self.traces[source.world.index][source.dataset.id] = {}
+
+        if source.world.index not in self.sources:
+            self.sources[source.world.index] = {}
+        if source.dataset.id not in self.sources[source.world.index]:
+            self.sources[source.world.index][source.dataset.id] = {}
+        self.sources[source.world.index][source.dataset.id][source.set_index] = source
 
         match source.options.plot_type:
             case PlotType.bar:
@@ -305,26 +313,26 @@ class StreamlitDashboard(Output):
                 data["name"] = source.options.name  # type: ignore
                 self.plots[source.world.index][source.dataset.id].add_traces([data])
 
-        # Part 2: TODO check if other timing needed
-        if source.options.secondary_y:
-            self.plots[source.world.index][source.dataset.id].layout.yaxis2.title = (  # type: ignore
-                source.options.legend_y
-            )
-            if isinstance(source.options.color_discrete_sequence, list):
-                color = source.options.color_discrete_sequence[0]
-                plcolors = convert_colors_to_same_type(color, "rgb")
-                if len(plcolors[0]) == 0:
-                    rgb = name_to_rgb(color)
-                    r, g, b = rgb.red, rgb.green, rgb.blue
-                else:
-                    (r, g, b) = unlabel_rgb(plcolors[0][0])
-                self.plots[source.world.index][source.dataset.id].update_yaxes(
-                    gridcolor=f"rgba({r},{g},{b},0.5)", secondary_y=True
+        if source.options.plot_type not in (PlotType.none, PlotType.export_only):
+            if source.options.secondary_y:
+                self.plots[source.world.index][source.dataset.id].layout.yaxis2.title = (  # type: ignore
+                    source.options.legend_y
                 )
-        else:
-            self.plots[source.world.index][source.dataset.id].layout.yaxis.title = (  # type: ignore
-                source.options.legend_y
-            )
+                if isinstance(source.options.color_discrete_sequence, list):
+                    color = source.options.color_discrete_sequence[0]
+                    plcolors = convert_colors_to_same_type(color, "rgb")
+                    if len(plcolors[0]) == 0:
+                        rgb = name_to_rgb(color)
+                        r, g, b = rgb.red, rgb.green, rgb.blue
+                    else:
+                        (r, g, b) = unlabel_rgb(plcolors[0][0])
+                    self.plots[source.world.index][source.dataset.id].update_yaxes(
+                        gridcolor=f"rgba({r},{g},{b},0.5)", secondary_y=True
+                    )
+            else:
+                self.plots[source.world.index][source.dataset.id].layout.yaxis.title = (  # type: ignore
+                    source.options.legend_y
+                )
 
     def _select_world(self, worlds) -> List[int]:
         world = 0
@@ -338,14 +346,14 @@ class StreamlitDashboard(Output):
         return [world]
 
     def _draw(self):
-        if self.world_index not in self.plots:
+        if self.world_index not in self.sources:
             return
-        for source_id in self.plots[self.world_index]:
+        for source_id in self.sources[self.world_index]:
             self._draw_plot(self.world_index, source_id)
-            for index in self.plots:
+            for index in self.sources:
                 if (
                     index < 0
-                    and Output.aggregated_title(source_id) in self.plots[index]
+                    and Output.aggregated_title(source_id) in self.sources[index]
                 ):
                     self._draw_plot(index, Output.aggregated_title(source_id))
 
@@ -356,21 +364,36 @@ class StreamlitDashboard(Output):
         log(f"Update plot {source_id}", LogLevel.verbose)
 
         with self.frames[world_index][source_id].container():
-            st.plotly_chart(self.plots[world_index][source_id])
+            if source_id in self.plots[world_index]:
+                st.plotly_chart(self.plots[world_index][source_id])
 
-            path_p, file_p = self.export_pickle(world_index, source_id)
-            st.download_button(
-                label="Pickle",
-                data=file_p,
-                file_name=path_p,
-                mime="application/octet-stream",
-                icon=":material/download:",
-            )
-            path_c, file_c = self.export_csv(world_index, source_id)
-            st.download_button(
-                label="CSV",
-                data=file_c,
-                file_name=path_c,
-                mime="text/csv",
-                icon=":material/download:",
-            )
+            any_data = False
+            export_only = True
+            for source in self.sources[world_index][source_id].values():
+                if source.options.plot_type != PlotType.none:
+                    any_data = True
+                if source.options.plot_type != PlotType.export_only:
+                    export_only = False
+
+            if export_only:
+                st.text(f"Export {source_id}")
+
+            if any_data:
+                path_p, file_p = self.export_pickle(world_index, source_id)
+                st.download_button(
+                    label="Pickle",
+                    data=file_p,
+                    file_name=path_p,
+                    mime="application/octet-stream",
+                    icon=":material/download:",
+                    key=f"{world_index},{source_id},P",
+                )
+                path_c, file_c = self.export_csv(world_index, source_id)
+                st.download_button(
+                    label="CSV",
+                    data=file_c,
+                    file_name=path_c,
+                    mime="text/csv",
+                    icon=":material/download:",
+                    key=f"{world_index},{source_id},C",
+                )

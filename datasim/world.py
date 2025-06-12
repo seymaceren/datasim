@@ -82,13 +82,16 @@ class World(ABC):
         except Exception:
             World._by_index: Dict[int, World] = {}
             World._registry: List[World] = []
-        self.index = (
-            World._registry.index(self)
-            if self in World._registry
-            else len(World._registry)
-        )
-        World._registry.append(self)
-        World._by_index[self.index] = self
+        if title == "NO_INDEX":
+            self.index = -1
+        else:
+            self.index = (
+                World._registry.index(self)
+                if self in World._registry
+                else len(World._registry)
+            )
+            World._registry.append(self)
+            World._by_index[self.index] = self
 
         self.runner = runner
 

@@ -31,6 +31,7 @@ class PlotType(Enum):
     """The type of plot to render."""
 
     none = "none"
+    export_only = "export_only"
     bar = "bar"
     line = "line"
     pie = "pie"
@@ -41,6 +42,8 @@ class PlotType(Enum):
         match self:
             case PlotType.none:
                 return "No plot"
+            case PlotType.export_only:
+                return "Export option only"
             case PlotType.bar:
                 return "Bar chart"
             case PlotType.line:
