@@ -1,5 +1,13 @@
 from typing import List, Optional
-from datasim import Entity, log, LogLevel, PlotOptions, State, UsingResourceState
+from datasim import (
+    Entity,
+    log,
+    LogLevel,
+    PlotOptions,
+    PlotType,
+    State,
+    UsingResourceState,
+)
 
 
 class WaitingPatientState(State):
@@ -16,7 +24,7 @@ class WaitingPatientState(State):
 
         self.patient.critical_time = (
             self.patient.world.time + float(critical_duration)
-            if critical_duration
+            if critical_duration.value is not None
             else None
         )
         log(
@@ -90,7 +98,12 @@ class Patient(Entity):
     def __init__(self, world, name, illness: str, treatment_time: float):
         self.illness = illness
         self.treatment_time = treatment_time
-        options = PlotOptions(title="Patients", auto_name=True, aggregate_only=True)
+        options = PlotOptions(
+            title="Patients",
+            auto_name=True,
+            aggregate_only=True,
+            plot_type=PlotType.export_only,
+        )
         super().__init__(world, name, WaitingPatientState, True, "Patients", options)
 
     def on_state_leaving(

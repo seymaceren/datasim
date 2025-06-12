@@ -1,4 +1,5 @@
 from codecs import open
+from datetime import datetime
 from inspect import getfile
 from itertools import product
 from os import path
@@ -20,6 +21,8 @@ class Runner:
     This class creates the World objects for any batches of runs defined in the definition yaml of the target class.
     """
 
+    complete_log: str = ""
+
     output: Output
     single_world: bool
     worlds: List[World]
@@ -36,6 +39,7 @@ class Runner:
     control_thread: Thread
     auto_output_path: str | None
     auto_output_csv: bool
+    date: str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     def __init__(
         self,
@@ -54,6 +58,7 @@ class Runner:
         Raises:
             ValueError: If the definition file contains an invalid grid definition.
         """
+
         definition: Optional[Dict[str, Dict]] = None
 
         type_file = getfile(world_class_object)
@@ -89,7 +94,11 @@ class Runner:
                                 (start, end) = tuple(variations["range"])
                                 step = variations["step"]
                                 variations = list(
-                                    range(int(start), int(end), int(step))
+                                    range(
+                                        round(start),
+                                        round(end) + round(step),
+                                        round(step),
+                                    )
                                 )
 
                             if not isinstance(variations, list):
@@ -223,9 +232,8 @@ class Runner:
             LogLevel.debug,
         )
 
-        self._gather(True)
-
-        self.output.aggregate_batches(self.worlds)
+        if self._gather(True):
+            self.output.aggregate_batches(self.worlds)
 
         if self.auto_output_path:
             self.output._save(
@@ -264,7 +272,9 @@ class Runner:
         for world in self.worlds:
             world._wait()
 
-    def _gather(self, calculate_all: bool = False):
+    def _gather(self, calculate_all: bool = False) -> bool:
+        any_changed = False
+
         if calculate_all:
             worlds = list(range(len(self.worlds)))
         else:
@@ -275,7 +285,9 @@ class Runner:
                 self.output._clear(self.worlds[world].index)
 
         for world in worlds:
-            self.worlds[world]._updateData()
+            any_changed = self.worlds[world]._updateData() or any_changed
+
+        return any_changed
 
     def _draw(self):
         self.output._select_world(self.worlds)

@@ -11,11 +11,11 @@ from .constant import Constant
 from .output import Output
 from .entity import Entity
 from .logging import log, LogLevel
-from .dataset import Dataset, DataSource
+from .dataset import DataFrameData, Dataset, DataSource
 from .quantity import Quantity
 from .queue import Queue
 from .resource import Resource
-from .types import Value
+from .types import PlotOptions, PlotType, Value
 
 
 class World(ABC):
@@ -286,6 +286,13 @@ class World(ABC):
         if self.ended and not restart:
             return False
 
+        if (
+            hasattr(self, "sim_thread")
+            and self.sim_thread
+            and self.sim_thread.is_alive()
+        ):
+            return True
+
         if tpu > 0.0:
             self.tpu = tpu
         self.ticks = 0
@@ -370,6 +377,19 @@ class World(ABC):
                 if self.variation
                 else ""
             )
+            if self.index not in self.output.sources:
+                self.output.sources[self.index] = {}
+            if id not in self.output.sources[self.index]:
+                self.output.sources[self.index][id] = {}
+            source = DataFrameData(
+                self,
+                aggregated,
+                PlotOptions(plot_type=PlotType.export_only, name=id),
+            )
+            aggregate_data: Dataset = Dataset(self, id, source)
+            aggregate_data._update()
+            if source.set_index:
+                self.output.sources[self.index][id][source.set_index] = source
 
         # TODO fix threading
         if self.stop_server:
@@ -378,10 +398,9 @@ class World(ABC):
             p = Process(pid)
             p.terminate()
 
-    def _updateData(self):
+    def _updateData(self) -> bool:
         log(f"Updating {len(self.datasets)} datasets...", LogLevel.verbose)
-        for dataset in self.datasets.values():
-            dataset._update()
+        return any([dataset._update() for dataset in self.datasets.values()])
 
     def add_data(self, dataset_id: str, source: DataSource) -> Tuple[Dataset, int]:
         """Add a data source to the world: collects data, and plots if dashboard is present and plot type is set."""

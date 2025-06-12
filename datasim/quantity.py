@@ -105,7 +105,10 @@ class Quantity:
         if data_id == "":
             data_id = self.id
 
-        if plot_options.aggregate_only:
+        if (
+            plot_options.aggregate_only
+            and plot_options.plot_type != PlotType.export_only
+        ):
             plot_options.plot_type = PlotType.none
         elif plot_options.plot_type == PlotType.none:
             plot_options.plot_type = PlotType.line
@@ -124,7 +127,7 @@ class Quantity:
         self.world.add_data(data_id, data)
 
     def _tick(self):
-        if self._value:
+        if self._value is not None:
             for index, (frequency, data) in enumerate(self._outputs):
                 if self.world.ticks % frequency == 0:
                     data.append(self.world.time, self._value)

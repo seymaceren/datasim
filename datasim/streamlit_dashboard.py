@@ -2,7 +2,7 @@ import plotly.express as px
 from plotly.graph_objs._figure import Figure
 from plotly.subplots import make_subplots
 from plotly.colors import convert_colors_to_same_type, unlabel_rgb
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
 from webcolors import name_to_rgb
@@ -16,7 +16,6 @@ class StreamlitDashboard(Output):
     """Dashboard using Streamlit."""
 
     plots: Dict[int, Dict[str, Figure]]
-    sources: Dict[int, Dict[str, Dict[int, Any]]]
     traces: Dict[int, Dict[str, Dict[int, Figure]]]
     frames: Dict[int, Dict[str, DeltaGenerator]]
     world_index: int
@@ -26,7 +25,6 @@ class StreamlitDashboard(Output):
         st.session_state.dashboard = self
 
         self.plots = {}
-        self.sources = {}
         self.traces = {}
         self.frames = {}
         self.world_index = 0
@@ -36,7 +34,6 @@ class StreamlitDashboard(Output):
     def _add_world(self, world: int):
         super()._add_world(world)
         self.plots[world] = {}
-        self.sources[world] = {}
         self.traces[world] = {}
         self.frames[world] = {}
 
@@ -314,6 +311,11 @@ class StreamlitDashboard(Output):
                 self.plots[source.world.index][source.dataset.id].add_traces([data])
 
         if source.options.plot_type not in (PlotType.none, PlotType.export_only):
+            if source.options.title:
+                self.plots[source.world.index][source.dataset.id].update_layout(
+                    title=source.options.title
+                )
+
             if source.options.secondary_y:
                 self.plots[source.world.index][source.dataset.id].layout.yaxis2.title = (  # type: ignore
                     source.options.legend_y
@@ -348,6 +350,16 @@ class StreamlitDashboard(Output):
     def _draw(self):
         if self.world_index not in self.sources:
             return
+        from .runner import Runner
+
+        st.download_button(
+            label="Full log",
+            data=Runner.complete_log,
+            file_name=f"DataSim Log {Runner.date}.txt",
+            mime="text/plain",
+            icon=":material/receipt_long:",
+        )
+
         for source_id in self.sources[self.world_index]:
             self._draw_plot(self.world_index, source_id)
             for index in self.sources:
@@ -375,12 +387,16 @@ class StreamlitDashboard(Output):
                 if source.options.plot_type != PlotType.export_only:
                     export_only = False
 
-            if export_only:
-                st.text(f"Export {source_id}")
+            st.markdown(
+                f"**{source_id}** (Export only)"
+                if export_only
+                else f"Export {source_id}"
+            )
 
             if any_data:
+                col1, col2 = st.columns([0.2, 0.7])
                 path_p, file_p = self.export_pickle(world_index, source_id)
-                st.download_button(
+                col1.download_button(
                     label="Pickle",
                     data=file_p,
                     file_name=path_p,
@@ -389,7 +405,7 @@ class StreamlitDashboard(Output):
                     key=f"{world_index},{source_id},P",
                 )
                 path_c, file_c = self.export_csv(world_index, source_id)
-                st.download_button(
+                col2.download_button(
                     label="CSV",
                     data=file_c,
                     file_name=path_c,

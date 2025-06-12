@@ -2,7 +2,7 @@ from abc import ABC
 from os import mkdir, path
 from pandas import DataFrame
 import pickle
-from typing import Dict, List, Literal, Optional, Tuple
+from typing import Any, Dict, List, Literal, Optional, Tuple
 
 import pandas as pd
 
@@ -15,14 +15,17 @@ class Output(ABC):
 
     dataframes: Dict[int, Dict[str, DataFrame]]
     dataframe_names: Dict[int, Dict[str, str]]
+    sources: Dict[int, Dict[str, Dict[int, Any]]]
 
     def __init__(self):
         """Output class is created during runner initialization."""
         self.dataframes = {}
         self.dataframe_names = {}
+        self.sources = {}
 
     def _add_world(self, world: int):
         self.dataframes[world] = {}
+        self.sources[world] = {}
         self.dataframe_names[world] = {}
 
     @staticmethod
@@ -44,15 +47,13 @@ class Output(ABC):
             for world_data in aggregated_data:
                 set_data[set_name].append(world_data[set_name])
 
-        neg_i = -1
-
         from .dataset import DataFrameData, Dataset
 
         for set_name, data in set_data.items():
-            if neg_i not in self.dataframes:
-                self._add_world(neg_i)
+            if -1 not in self.dataframes:
+                self._add_world(-1)
 
-            self._clear(neg_i)
+            self._clear(-1)
 
             result = pd.DataFrame(
                 data,
@@ -60,8 +61,8 @@ class Output(ABC):
             )
 
             key = Output.aggregated_title(set_name)
-            self.dataframes[neg_i] = {key: result}
-            self.dataframe_names[neg_i] = {key: key}
+            self.dataframes[-1][key] = result
+            self.dataframe_names[-1][key] = key
 
             from .runner import Runner
 
@@ -72,8 +73,6 @@ class Output(ABC):
             )
             aggregate_data: Dataset = Dataset(Runner.no_world, key, source)
             aggregate_data._update()
-
-            neg_i -= 1
 
     def export_pickle(self, world: int, source_id: str) -> Tuple[str, bytes]:
         """Export the data from a source to pickle format.

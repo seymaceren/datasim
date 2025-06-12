@@ -80,7 +80,7 @@ class ICU(World):
             ):
                 continue
             arrived = 0.0
-            in_bed = 0.0
+            in_bed = None
             treated = None
             died = None
             for index, row in source._data_frame.iterrows():
@@ -93,16 +93,22 @@ class ICU(World):
                         treated = row["hours"]
                     case "Died":
                         died = row["hours"]
-            bed_time = (treated if treated else died if died else in_bed) - in_bed
+            bed_time = (
+                0.0
+                if in_bed is None
+                else ((treated if treated else died if died else 0.0) - in_bed)
+            )
             patient_data.append(
                 {
                     "id": source.source.id,
                     "condition": source.source.illness,
                     "arrived": arrived,
-                    "waiting": in_bed - arrived,
-                    "bed_time": bed_time,
                     "treated": treated,
                     "died": died,
+                    "waiting": (
+                        (in_bed if in_bed else died if died else arrived) - arrived
+                    ),
+                    "bed_time": bed_time,
                 }
             )
 

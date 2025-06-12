@@ -28,17 +28,21 @@ def log(
         include_timestamp (bool, optional): Whether to include the timestamp before the message. Defaults to True.
     """
     if level >= log_level:
+        formatted = (
+            f"[{world.index}:{world.time}] {message}\n"
+            if world and include_timestamp
+            else f"{message}\n"
+        )
         print(
             color(
-                (
-                    f"[{world.time}] {message}\n"
-                    if world and include_timestamp
-                    else f"{message}\n"
-                ),
+                formatted,
                 fg=fg_color,
                 bg=bg_color,
                 style=style,
             ),
             end="",
         )
+        from .runner import Runner
+
+        Runner.complete_log = Runner.complete_log + formatted
         stdout.flush()

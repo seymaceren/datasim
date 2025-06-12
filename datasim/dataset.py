@@ -433,11 +433,13 @@ class Dataset:
         for new_index in range(index, len(self.sources)):
             self.sources[new_index].set_index = new_index
 
-    def _update(self):
+    def _update(self) -> bool:
+        changed = False
         for source in self.sources:
             if not self._gathered:
                 log(f"- Updating: {source.options.name}...", LogLevel.verbose)
                 source._update_trace()
+                changed = True
             if source.options.plot_type not in (PlotType.none, PlotType.export_only):
                 self.output._add_source(
                     self.world.index,
@@ -447,11 +449,12 @@ class Dataset:
                 )
 
         self.output.dataframes[self.world.index][self.id] = DataFrame()
-        self.output.dataframe_names[self.world.index][self.id] = (
-            f"{self.world.title} - {self.id} - {self.world.variation.replace(":", ".")}"
-            if self.world.variation
-            else ""
-        )
+        if self.id not in self.output.dataframe_names[self.world.index]:
+            self.output.dataframe_names[self.world.index][self.id] = (
+                f"{self.world.title} - {self.id} - {self.world.variation.replace(":", ".")}"
+                if self.world.variation
+                else ""
+            )
 
         for source in self.sources:
             if source.dataset:
@@ -470,3 +473,5 @@ class Dataset:
                     )
 
         self._gathered = True
+
+        return changed
