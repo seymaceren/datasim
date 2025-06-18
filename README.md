@@ -26,7 +26,20 @@ See sample code, the basic setup is:
 - Implement a subclass of `datasim.World`
   - Add any needed entities in `__init__()` after calling `super().__init__("NAME_HERE")`
   - Add plots in `update_plots()`
-- Run `main.py`
+- Run `datasim.py` in the following way:
+
+  ```python
+  Usage: [streamlit run]/[python] datasim.py [options] world=<classname>
+    classname: specify the main World class
+
+    Options:
+    -d / --debug: print debug output
+    -v / --verbose: print all verbose output
+    -o=<path> / --out-path=<path>: save output in the specified directory
+    -c / --csv: save csv output instead of Pickle
+  
+  Example: streamlit run datasim.py -v world=examples.icu.icu.ICU
+  ```
 
 ## Plans
 ### Beta
