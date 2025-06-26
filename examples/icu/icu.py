@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
-from datasim import Quantity, Queue, Resource, StateData, World
+from datasim import log, LogLevel, Quantity, Queue, Resource, StateData, World
 from .patient import DiedPatientState, PatientData, Patient, TreatedPatientState
 
 
@@ -33,12 +33,21 @@ class ICU(World):
             variation_dict=variation_dict,
         )
 
-        self.load_patient_data("examples/icu/simulatiedata.csv")
+        # Option: load from CSV or simulate input using Generator
+        # self.load_patient_data("examples/icu/simulatiedata.csv")
+        self.generate_patient_data(500)
 
     def load_patient_data(self, filename: str):
         self.patients = []
         for row in list(reader(open(filename)))[1:]:
             self.patients.append(PatientData(row))
+        log(f"Loaded data for {len(self.patients)} patients", LogLevel.debug)
+
+    def generate_patient_data(self, end_enter_time: float):
+        self.patients = self.generators["patient_generator"].generate(
+            PatientData, limits={"enter_time": (">", end_enter_time)}, sort="enter_time"
+        )
+        log(f"Generated data for {len(self.patients)} patients", LogLevel.debug)
 
     def remove(self, obj):
         if isinstance(obj, Patient):
@@ -69,7 +78,11 @@ class ICU(World):
             next = self.patients_waiting.peek()
 
     def after_entities_update(self):
-        if len(self.patients_waiting) == 0 and len(self.entities) == 0:
+        if (
+            len(self.patients_waiting) == 0
+            and len(self.entities) == 0
+            and len(self.patients) == 0
+        ):
             self.stopped = True
 
     def aggregate_data(self) -> Dict[str, pd.DataFrame]:

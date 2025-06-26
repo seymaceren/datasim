@@ -8,10 +8,11 @@ from time import sleep
 from typing import Any, Dict, Final, List, Optional, Tuple
 
 from .constant import Constant
-from .output import Output
-from .entity import Entity
-from .logging import log, LogLevel
 from .dataset import DataFrameData, Dataset, DataSource
+from .entity import Entity
+from .generator import Generator
+from .logging import log, LogLevel
+from .output import Output
 from .quantity import Quantity
 from .queue import Queue
 from .resource import Resource
@@ -36,6 +37,7 @@ class World(ABC):
     _entity_registry: Final[dict[type, int]] = {}
     datasets: Final[Dict[str, Dataset]]
     constants: Final[Dict[str, Any]]
+    generators: Final[Dict[str, Generator]]
     resources: Final[Dict[str, Resource]]
     queues: Final[Dict[str, Queue]]
     quantities: Final[Dict[str, Quantity]]
@@ -119,6 +121,7 @@ class World(ABC):
         self._entity_dict = {}
         self.datasets = {}
         self.constants = {}
+        self.generators = {}
         self.resources = {}
         self.queues = {}
         self.quantities = {}
@@ -136,6 +139,10 @@ class World(ABC):
             if "constants" in definition:
                 for constant in definition["constants"]:
                     Constant._from_yaml(self, constant)
+
+            if "generators" in definition:
+                for generator in definition["generators"]:
+                    Generator._from_yaml(self, generator)
 
             if "resources" in definition:
                 for resource in definition["resources"]:
@@ -158,7 +165,7 @@ class World(ABC):
         """Reset the World so you can start a different simulation."""
         self.active = False
 
-    def add(self, obj: Constant | Entity | Resource | Queue | Quantity):
+    def add(self, obj: Constant | Generator | Entity | Resource | Queue | Quantity):
         """Add an entity to this :class:`World`.
 
         Args:
@@ -176,6 +183,8 @@ class World(ABC):
 
         if isinstance(obj, Constant):
             self.constants[obj.id] = obj
+        elif isinstance(obj, Generator):
+            self.generators[obj.id] = obj
         elif isinstance(obj, Entity):
             self.entities.append(obj)
             self._entity_dict[obj.id] = obj
@@ -186,7 +195,9 @@ class World(ABC):
         elif isinstance(obj, Quantity):
             self.quantities[obj.id] = obj
 
-    def remove(self, obj: Constant | Entity | Resource | Queue | Quantity) -> bool:
+    def remove(
+        self, obj: Constant | Generator | Entity | Resource | Queue | Quantity
+    ) -> bool:
         """Remove an entity from this :class:`World`.
 
         Args:
@@ -200,6 +211,8 @@ class World(ABC):
 
             if isinstance(obj, Constant):
                 self.constants.pop(obj.id)
+            elif isinstance(obj, Generator):
+                self.generators.pop(obj.id)
             elif isinstance(obj, Entity):
                 self.entities.remove(obj)
                 self._entity_dict.pop(obj.id)
@@ -223,9 +236,17 @@ class World(ABC):
         obj_path = selector.split(".")
         current = self
         for path_part in obj_path[:-1]:
-            current = getattr(current, path_part)
+            current = (
+                current.get(path_part)
+                if isinstance(current, dict)
+                else getattr(current, path_part)
+            )
 
-        destination = getattr(current, obj_path[-1])
+        destination = (
+            current.get(obj_path[-1])
+            if isinstance(current, dict)
+            else getattr(current, obj_path[-1])
+        )
 
         if (
             destination is None
@@ -233,7 +254,10 @@ class World(ABC):
             or isinstance(destination, float)
             or isinstance(destination, str)
         ):
-            setattr(current, obj_path[-1], value)
+            if isinstance(current, dict):
+                current[obj_path[-1]] = value
+            else:
+                setattr(current, obj_path[-1], value)
         elif isinstance(destination, Constant):
             destination.value = value
 

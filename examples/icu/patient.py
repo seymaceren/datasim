@@ -80,11 +80,12 @@ class PatientData:
     treatment_time: float
     illness: str
 
-    def __init__(self, data: List):
-        self.id = data[0]
-        self.enter_time = float(data[1])
-        self.treatment_time = float(data[2])
-        self.illness = data[3]
+    def __init__(self, data: List = []):
+        if len(data) > 3:
+            self.id = data[0]
+            self.enter_time = float(data[1])
+            self.treatment_time = float(data[2])
+            self.illness = data[3]
 
 
 class Patient(Entity):

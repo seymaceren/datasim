@@ -5,6 +5,7 @@
         "github.vscode-github-actions",
         "fnando.linter",
         "ms-python.black-formatter",
-        "virtualplay.vibrant-semantics-dark"
+        "virtualplay.vibrant-semantics-dark",
+        "ms-toolsai.datawrangler"
     ]
 }

@@ -18,8 +18,46 @@ batches:
   - beds.slots:
       range: [4, 20]
       step: 4
+    patient_generator.subsets.A.treatment_time: [10, 15, 20]
 #     critical_duration:B: [400, 600]
 #     critical_duration:C: [150, 200, 300]
+
+generators:
+  - patient_generator:
+      class: PatientData
+      key: illness
+      subsets:
+        - illness: A
+          enter_time:
+            sample: accumulate
+            value: 12
+          treatment_time: 24
+        - illness: B
+          enter_time:
+            sample: accumulate
+            distribution: normal
+            parameters:
+              loc: 12
+              scale: 2
+          treatment_time:
+            sample: independent
+            distribution: normal
+            parameters:
+              loc: 96
+              scale: 24
+        - illness: C
+          enter_time:
+            sample: accumulate
+            distribution: uniform
+            parameters:
+              low: 6
+              high: 24
+          treatment_time:
+            sample: independent
+            distribution: uniform
+            parameters:
+              low: 24
+              high: 96
 
 constants:
   - critical_duration:

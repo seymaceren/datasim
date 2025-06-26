@@ -195,18 +195,17 @@ class Queue(Generic[EntityType]):
 
         return self.queue[-1]
 
-    def prioritize(self, entity: EntityType) -> bool:
-        """Pushes an entity to the front of the list.
-
-        If the entity was not in the list, it will not be added;
-        If the entity is in the list more than once, the copy furthest to the back will be put at the front.
+    def queue_prioritized(self, entity: EntityType, sort_function) -> bool:
+        """Pushes an entity to a sorted place in the list
 
         Args:
             entity (Entity): _description_
+            sort_function (lambda): _function that evaluates to a __gt__ comparable type
         """
         (_, entry) = [
             (i, (e, a)) for i, (e, a) in enumerate(self.queue) if e is entity
         ][0]
+        # TODO: change
         if self.queue.remove(entry):
             self.queue.append(entry)
             self.changed_tick = self.world.ticks
