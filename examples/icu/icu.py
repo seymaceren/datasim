@@ -1,10 +1,17 @@
 from csv import reader
+from math import inf
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
 
 from datasim import log, LogLevel, Quantity, Queue, Resource, StateData, World
-from .patient import DiedPatientState, PatientData, Patient, TreatedPatientState
+from .patient import (
+    DiedPatientState,
+    PatientData,
+    Patient,
+    TreatedPatientState,
+    WaitingPatientState,
+)
 
 
 class ICU(World):
@@ -33,9 +40,10 @@ class ICU(World):
             variation_dict=variation_dict,
         )
 
-        # Option: load from CSV or simulate input using Generator
-        # self.load_patient_data("examples/icu/simulatiedata.csv")
-        self.generate_patient_data(500)
+        if runner.data_source:
+            self.load_patient_data(runner.data_source)
+        else:
+            self.generate_patient_data(500)
 
     def load_patient_data(self, filename: str):
         self.patients = []
@@ -59,23 +67,32 @@ class ICU(World):
 
     def before_entities_update(self):
         while len(self.patients) > 0 and self.patients[0].enter_time <= self.time:
-            patient = self.patients.pop(0)
-            self.patients_waiting.enqueue(
-                Patient(self, patient.id, patient.illness, patient.treatment_time)
+            patient_data = self.patients.pop(0)
+            patient = Patient(
+                self, patient_data.id, patient_data.illness, patient_data.treatment_time
             )
+            self.patients_waiting.enqueue(patient)
 
-        # We don't want our patients to look for beds themselves but in order of arrival.
-        next = self.patients_waiting.peek()
-        while next is not None and not self.beds.occupied:
+        # We don't want our patients to look for beds themselves but in order of the queue.
+        peek = self.patients_waiting.peek()
+        while peek is not None and not self.beds.occupied:
+            next, _ = peek
             if next.state == DiedPatientState:
                 self.patients_waiting.dequeue()
             else:
+                queue_string = " // ".join(
+                    [
+                        f"{p.id} {p.illness} {f"{p.critical_time:.1f}" if p.critical_time else "None"}"
+                        for p, _ in self.patients_waiting.queue
+                    ]
+                )
+                log(f"Queue:\n{queue_string}", LogLevel.debug, "yellow")
                 self.beds.try_use(
                     next,
                     usage_time=next.treatment_time,
                     remove_from_queue=self.patients_waiting,
                 )
-            next = self.patients_waiting.peek()
+            peek = self.patients_waiting.peek()
 
     def after_entities_update(self):
         if (
@@ -92,7 +109,7 @@ class ICU(World):
                 source.source, Patient
             ):
                 continue
-            arrived = 0.0
+            arrived = None
             in_bed = None
             treated = None
             died = None
@@ -106,6 +123,8 @@ class ICU(World):
                         treated = row["hours"]
                     case "Died":
                         died = row["hours"]
+            if arrived is None:
+                arrived = in_bed if in_bed else 0.0
             bed_time = (
                 0.0
                 if in_bed is None

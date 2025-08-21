@@ -146,8 +146,7 @@ class Resource:
             and plot_options.plot_type != PlotType.export_only
         ):
             plot_options.plot_type = PlotType.none
-        elif plot_options.plot_type == PlotType.none:
-            plot_options.plot_type = PlotType.line
+
         if plot_options.legend_y == "":
             plot_options.legend_y = self.resource_type
 

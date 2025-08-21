@@ -333,6 +333,8 @@ class PlotOptions:
             if "color_discrete_sequence" not in params:
                 params["color_discrete_sequence"] = [params["plot_color"]]
             del params["plot_color"]
+        if "plot_type" in params and isinstance(params["plot_type"], str):
+            params["plot_type"] = PlotType[params["plot_type"]]
         options = PlotOptions()
         for key in params:
             options.__setattr__(key, params[key])

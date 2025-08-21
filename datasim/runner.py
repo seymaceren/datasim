@@ -6,7 +6,7 @@ from os import path
 from threading import Thread
 from time import sleep
 from sys import stdout
-from typing import Dict, Final, List, Optional
+from typing import Any, Dict, Final, List, Optional
 from yaml import full_load
 
 from .output import Output, SimpleFileOutput
@@ -28,6 +28,8 @@ class Runner:
     worlds: List[World]
     title: Final[str]
     headless: bool
+    data_source: str | None
+    runs_per_batch: int
     started: bool
     _active: bool
     update_time: float | None
@@ -38,7 +40,9 @@ class Runner:
     stop_server: bool = False
     control_thread: Thread
     auto_output_path: str | None
+    clear_auto_output_path: bool
     auto_output_csv: bool
+    split_worlds: bool
     date: str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     def __init__(
@@ -46,7 +50,9 @@ class Runner:
         world_class_object,
         headless: bool = False,
         auto_output_path: str | None = None,
+        clear_auto_output_path: bool = False,
         auto_output_csv: bool = False,
+        split_worlds: bool = False,
     ):
         """Create a simulation Runner.
 
@@ -59,7 +65,7 @@ class Runner:
             ValueError: If the definition file contains an invalid grid definition.
         """
 
-        definition: Optional[Dict[str, Dict]] = None
+        definition: Optional[Dict[str, Any]] = None
 
         type_file = getfile(world_class_object)
         head, tail = path.split(type_file)
@@ -72,6 +78,14 @@ class Runner:
 
         if definition_file and path.exists(definition_file):
             definition = full_load(open(definition_file))
+
+        self.data_source = None
+        if definition and "data_source" in definition:
+            self.data_source = str(definition["data_source"])
+
+        self.runs_per_batch = 1
+        if definition and "runs_per_batch" in definition:
+            self.runs_per_batch = int(definition["runs_per_batch"])
 
         batches: List[Dict[str, Value]] = []
 
@@ -116,28 +130,35 @@ class Runner:
 
         self._active = True
 
+        self.worlds = []
+        self.single_world = len(batches) == 0
+        self.split_worlds = split_worlds and not self.single_world
+
         self.headless = headless
         if headless:
-            self.output = SimpleFileOutput()
+            self.output = SimpleFileOutput(self, self.split_worlds)
         else:
             from .streamlit_dashboard import StreamlitDashboard
 
-            self.output = StreamlitDashboard()
-
-        self.worlds = []
-        self.single_world = len(batches) == 0
+            self.output = StreamlitDashboard(self, self.split_worlds)
 
         for batch in batches:
-            world: World = world_class_object(
-                self,
-                headless=headless,
-                definition=definition,
-                variation=Runner._variation_string(batch),
-                variation_dict=batch,
-            )
-            for selector, value in batch.items():
-                world._set_variation(selector, value)
-            self.worlds.append(world)
+            for run in range(self.runs_per_batch):
+                world: World = world_class_object(
+                    self,
+                    headless=headless,
+                    definition=definition,
+                    variation=Runner._variation_string(batch),
+                    variation_dict=batch,
+                )
+                for selector, value in batch.items():
+                    try:
+                        world._set_variation(selector, value)
+                    except:
+                        raise AttributeError(
+                            f"Variation {selector} could not be found or set to {value}!"
+                        )
+                self.worlds.append(world)
 
         if self.single_world:
             self.worlds.append(
@@ -155,6 +176,7 @@ class Runner:
         self.update_time = 1.0
 
         self.auto_output_path = auto_output_path
+        self.clear_auto_output_path = clear_auto_output_path
         self.auto_output_csv = auto_output_csv
 
         stdout.reconfigure(encoding="utf-8")  # type: ignore
@@ -167,7 +189,7 @@ class Runner:
         if self.single_world:
             log("No batches defined, created a single world.", LogLevel.verbose)
         else:
-            log(f"Created {len(batches)} worlds.", LogLevel.verbose)
+            log(f"Created {len(self.worlds)} worlds.", LogLevel.verbose)
 
         Runner.no_world = World(self, "NO_INDEX")
 
@@ -232,12 +254,14 @@ class Runner:
             LogLevel.debug,
         )
 
-        if self._gather(True):
-            self.output.aggregate_batches(self.worlds)
+        self._gather(True)
 
         if self.auto_output_path:
             self.output._save(
-                self.auto_output_path, "csv" if self.auto_output_csv else "pickle"
+                self.auto_output_path,
+                self.clear_auto_output_path,
+                self.split_worlds,
+                "csv" if self.auto_output_csv else "pickle",
             )
 
         self._draw()

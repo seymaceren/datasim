@@ -36,6 +36,8 @@ See sample code, the basic setup is:
     -d / --debug: print debug output
     -v / --verbose: print all verbose output
     -o=<path> / --out-path=<path>: save output in the specified directory
+    -s / --split-worlds: split output into one file per run
+    --clear-output: first delete anything in the specified output directory (use with caution!)
     -c / --csv: save csv output instead of Pickle
   
   Example: streamlit run datasim.py -v world=examples.icu.icu.ICU

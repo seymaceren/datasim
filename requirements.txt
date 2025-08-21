@@ -19,3 +19,4 @@ ordered_set>=4.1.0
 ansicolors>=1.1.8
 webcolors>=24.11.1
 flatdict>=4.0.1
+kaleido>=1.0.0

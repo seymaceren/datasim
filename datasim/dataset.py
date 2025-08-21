@@ -435,11 +435,14 @@ class Dataset:
 
     def _update(self) -> bool:
         changed = False
+        any_output = False
         for source in self.sources:
             if not self._gathered:
                 log(f"- Updating: {source.options.name}...", LogLevel.verbose)
                 source._update_trace()
                 changed = True
+            if source.options.plot_type != PlotType.none:
+                any_output = True
             if source.options.plot_type not in (PlotType.none, PlotType.export_only):
                 self.output._add_source(
                     self.world.index,
@@ -448,16 +451,17 @@ class Dataset:
                     source.options.secondary_y,
                 )
 
-        self.output.dataframes[self.world.index][self.id] = DataFrame()
-        if self.id not in self.output.dataframe_names[self.world.index]:
-            self.output.dataframe_names[self.world.index][self.id] = (
-                f"{self.world.title} - {self.id} - {self.world.variation.replace(":", ".")}"
-                if self.world.variation
-                else ""
-            )
+        if any_output:
+            self.output.dataframes[self.world.index][self.id] = DataFrame()
+            if self.id not in self.output.dataframe_names[self.world.index]:
+                self.output.dataframe_names[self.world.index][self.id] = (
+                    f"{self.world.title} - {self.id} - {self.world.variation.replace(":", ".")}"
+                    if self.world.variation and self.world.runner.split_worlds
+                    else f"{self.world.title} - {self.id}"
+                )
 
         for source in self.sources:
-            if source.dataset:
+            if source.options.plot_type != PlotType.none and source.dataset is not None:
                 self.output._update_source(source)
 
                 dataframe = source._data_frame.copy()

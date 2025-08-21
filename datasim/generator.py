@@ -9,8 +9,18 @@ from .types import Number, Value
 class Sampler:
     property: str
 
-    def __init__(self, property: str):
+    def __init__(
+        self,
+        property: str,
+        min: float | None = None,
+        max: float | None = None,
+        scale: float = 1.0,
+    ):
         self.property = property
+        self.min = min
+        self.max = max
+        self.scale = scale
+        self.first = True
 
     @staticmethod
     def _from_yaml(property: str, params: Dict) -> "Sampler":
@@ -23,6 +33,9 @@ class Sampler:
                     params["value"],
                     params.get("sample", "independent") == "accumulate",
                     params.get("start", None),
+                    params.get("min", None),
+                    params.get("max", None),
+                    params.get("scale", 1.0),
                 )
 
             if "distribution" in params:
@@ -31,6 +44,10 @@ class Sampler:
                     params["distribution"],
                     params.get("parameters", {}),
                     params.get("sample", "independent"),
+                    params.get("start", None),
+                    params.get("min", None),
+                    params.get("max", None),
+                    params.get("scale", 1.0),
                 )
 
             return StaticSampler(property, None)
@@ -45,21 +62,33 @@ class StaticSampler(Sampler):
     step: Value
 
     def __init__(
-        self, property: str, value: Value, accumulate: bool = False, start: Value = None
+        self,
+        property: str,
+        value: Value,
+        accumulate: bool = False,
+        start: Value = None,
+        min: float | None = None,
+        max: float | None = None,
+        scale: float = 1.0,
     ):
-        super().__init__(property)
+        super().__init__(property, min, max, scale)
         self.accumulate = accumulate
         self.value = start if start else 0.0 if isinstance(value, float) else 0
         self.step = value
 
     def next(self) -> Value:
-        if (
-            self.accumulate
-            and isinstance(self.value, int | float)
-            and isinstance(self.step, int | float)
-        ):
-            self.value += self.step
-        return self.value
+        if self.first:
+            self.first = False
+        else:
+            if (
+                self.accumulate
+                and isinstance(self.value, int | float)
+                and isinstance(self.step, int | float)
+            ):
+                self.value += self.step
+        return (
+            self.value if not isinstance(self.value, float) else self.scale * self.value
+        )
 
 
 class DistributionSampler(Sampler):
@@ -76,20 +105,34 @@ class DistributionSampler(Sampler):
         parameters: Dict,
         accumulation: Literal["independent", "accumulate"],
         start: Optional[float] = None,
+        min: float | None = None,
+        max: float | None = None,
+        scale=1.0,
     ):
-        super().__init__(property)
-        self.value = start if start else 0.0
+        super().__init__(property, min, max, scale)
         self.accumulate = accumulation == "accumulate"
         self.rng = np.random.default_rng()
         self.np_function = getattr(self.rng, np_generator)
         self.parameters = parameters
+        self.value = start if start else self.sample()
+
+    def sample(self) -> float:
+        value = self.np_function(**self.parameters)
+        if self.min and value < self.min:
+            return self.min
+        if self.max and value > self.max:
+            return self.max
+        return self.scale * value
 
     def next(self) -> Value:
-        sample = self.np_function(**self.parameters)
-        if not self.accumulate:
-            return sample
+        if self.first:
+            self.first = False
+        else:
+            sample = self.sample()
+            if not self.accumulate:
+                return sample
 
-        self.value += sample
+            self.value += sample
         return self.value
 
 

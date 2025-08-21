@@ -1,5 +1,7 @@
 from abc import ABC
 from os import mkdir, path
+from re import split
+import shutil
 from pandas import DataFrame
 import pickle
 from typing import Any, Dict, List, Literal, Optional, Tuple
@@ -16,12 +18,16 @@ class Output(ABC):
     dataframes: Dict[int, Dict[str, DataFrame]]
     dataframe_names: Dict[int, Dict[str, str]]
     sources: Dict[int, Dict[str, Dict[int, Any]]]
+    runner: Any
+    split_worlds: bool
 
-    def __init__(self):
+    def __init__(self, runner: Any, split_worlds: bool):
         """Output class is created during runner initialization."""
         self.dataframes = {}
         self.dataframe_names = {}
         self.sources = {}
+        self.runner = runner
+        self.split_worlds = split_worlds
 
     def _add_world(self, world: int):
         self.dataframes[world] = {}
@@ -29,10 +35,10 @@ class Output(ABC):
         self.dataframe_names[world] = {}
 
     @staticmethod
-    def aggregated_title(set_name):
+    def _aggregated_title(set_name):
         return f"{set_name} - Aggregated"
 
-    def aggregate_batches(self, worlds: List):
+    def _aggregate_batches(self, worlds: List):
         from .world import World
 
         aggregated_data = []
@@ -60,7 +66,7 @@ class Output(ABC):
                 columns=list(data[0].keys()),
             )
 
-            key = Output.aggregated_title(set_name)
+            key = Output._aggregated_title(set_name)
             self.dataframes[-1][key] = result
             self.dataframe_names[-1][key] = key
 
@@ -74,32 +80,62 @@ class Output(ABC):
             aggregate_data: Dataset = Dataset(Runner.no_world, key, source)
             aggregate_data._update()
 
-    def export_pickle(self, world: int, source_id: str) -> Tuple[str, bytes]:
+    def _concat_worlds(self, source_id: str) -> Tuple[str, DataFrame]:
+        frames = []
+        name = list(self.dataframe_names.values())[0][source_id]
+        for id, frame in self.dataframes.items():
+            if len(frame) == 0:
+                continue
+            if len(self.runner.worlds) == 1:
+                return name, frame[source_id]
+
+            with_variation = frame[source_id].copy()
+            with_variation.insert(0, "world_id", id)
+            for variation, value in self.runner.worlds[id].variation_dict.items():
+                with_variation.insert(0, variation, value)
+
+            frames.append(with_variation)
+        return name, pd.concat(frames)
+
+    def export_pickle(self, world: int | None, source_id: str) -> Tuple[str, bytes]:
         """Export the data from a source to pickle format.
 
         Args:
-            source_id (str): id of source to export.
+            world (int or None): world ID of source, or None for a single world,
+                                 which will add world ID as a column if batched
+            source_id (str): ID of source to export.
 
         Returns:
-            (str, bytes): filename with variation, pickle bytes.
+            (str, bytes): filename, pickle bytes.
         """
-        return f"{self.dataframe_names[world][source_id]}.pickle", pickle.dumps(
-            self.dataframes[world][source_id]
-        )
+        if world is None:
+            name, frames = self._concat_worlds(source_id)
+            return f"{name}.pickle", pickle.dumps(frames)
+        else:
+            return (
+                f"{self.dataframe_names[world][source_id]}.pickle",
+                pickle.dumps(self.dataframes[world][source_id]),
+            )
 
-    def export_csv(self, world: int, source_id: str) -> Tuple[str, str]:
+    def export_csv(self, world: int | None, source_id: str) -> Tuple[str, str]:
         """Export the data from a source to CSV format.
 
         Args:
-            source_id (str): id of source to export.
+            world (int or None): world ID of source, or None for a single world,
+                                 which will add world ID as a column if batched
+            source_id (str): ID of source to export.
 
         Returns:
-            (str, str): filename with variation, csv string.
+            (str, str): filename, csv string.
         """
-        return (
-            f"{self.dataframe_names[world][source_id]}.csv",
-            self.dataframes[world][source_id].to_csv(index=False),
-        )
+        if world is None:
+            name, frames = self._concat_worlds(source_id)
+            return f"{name}.csv", frames.to_csv(index=False)
+        else:
+            return (
+                f"{self.dataframe_names[world][source_id]}.csv",
+                self.dataframes[world][source_id].to_csv(index=False),
+            )
 
     def _clear(self, world: int):
         pass
@@ -121,51 +157,77 @@ class Output(ABC):
     def _draw(self):
         pass
 
-    def _save(self, directory: str, format: Literal["pickle", "csv"]):
+    def _save(
+        self,
+        directory: str,
+        clear_directory: bool,
+        split_worlds: bool,
+        format: Literal["pickle", "csv"],
+    ):
         pass
 
 
 class SimpleFileOutput(Output):
     """Simple/fastest output without dashboard: only stores data."""
 
-    def _save(self, directory: str, format: Literal["pickle", "csv"]):
+    def _save(
+        self,
+        directory: str,
+        clear_directory: bool,
+        split_worlds: bool,
+        format: Literal["pickle", "csv"],
+    ):
         directory = path.abspath(directory)
+        outputs = [len(self.dataframes[world]) for world in self.dataframes]
+        num_outputs = sum(outputs) if split_worlds else max(outputs)
         log(
-            f"Saving {sum([len(self.dataframes[world]) for world in self.dataframes])}x output to {directory}",
+            f"Saving {num_outputs}x output to {directory}",
             LogLevel.debug,
         )
 
+        if clear_directory and path.exists(directory):
+            shutil.rmtree(directory)
         if not path.exists(directory):
             mkdir(directory)
 
-        match format:
-            case "pickle":
-                self.export_all_pickle(directory)
-            case "csv":
-                self.export_all_csv(directory)
+        self.export_all(directory, split_worlds, format)
 
-    def export_all_pickle(self, directory: str):
-        """Export all sources as .pickle files.
+    def export_all(
+        self, directory: str, split_worlds: bool, format: Literal["pickle", "csv"]
+    ):
+        """Export all sources as .pickle or .csv files.
 
         Args:
             directory (str): path of a directory to store files in.
         """
-        for world in self.dataframes:
-            for source_id in self.dataframes[world]:
-                filename, content = self.export_pickle(world, source_id)
-                log(f"...{filename} ({len(content)} bytes)")
-                with open(path.join(directory, filename), "wb") as file:
-                    file.write(content)
+        if split_worlds:
+            for world in self.dataframes:
+                for source_id in self.dataframes[world]:
+                    match format:
+                        case "pickle":
+                            filename, content = self.export_pickle(world, source_id)
+                        case "csv":
+                            filename, content = self.export_csv(world, source_id)
+                    log(f"...{filename} ({len(content)} bytes)")
+                    with open(
+                        path.join(directory, filename),
+                        "wb" if format == "pickle" else "w",
+                    ) as file:
+                        file.write(content)
+        else:
+            source_ids = set()
+            for world in self.dataframes:
+                for source_id in self.dataframes[world]:
+                    source_ids.add(source_id)
 
-    def export_all_csv(self, directory: str):
-        """Export all sources as .csv files.
-
-        Args:
-            directory (str): path of a directory to store files in.
-        """
-        for world in self.dataframes:
-            for source_id in self.dataframes[world]:
-                filename, content = self.export_csv(world, source_id)
+            for source_id in source_ids:
+                match format:
+                    case "pickle":
+                        filename, content = self.export_pickle(None, source_id)
+                    case "csv":
+                        filename, content = self.export_csv(None, source_id)
                 log(f"...{filename} ({len(content)} bytes)")
-                with open(path.join(directory, filename), "w") as file:
+                with open(
+                    path.join(directory, filename), "wb" if format == "pickle" else "w"
+                ) as file:
                     file.write(content)

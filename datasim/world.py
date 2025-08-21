@@ -116,7 +116,11 @@ class World(ABC):
                 headless = definition["headless"]
 
         self.active = True
-        self.title = title if self.runner.single_world else f"{title} {self.index}"
+        self.title = (
+            f"{title} {self.index}"
+            if self.runner.split_worlds and not self.runner.single_world
+            else title
+        )
         self.entities = OrderedSet[Entity]([])
         self._entity_dict = {}
         self.datasets = {}
@@ -132,7 +136,7 @@ class World(ABC):
 
         self.headless = headless
 
-        self.variation = variation
+        self.variation = f"{self.index} - {variation}" if variation else None
         self.variation_dict = variation_dict
 
         if definition:
@@ -398,8 +402,8 @@ class World(ABC):
             self.output.dataframes[self.index][id] = aggregated
             self.output.dataframe_names[self.index][id] = (
                 f"{self.title} - {id} - {self.variation.replace(":", ".")}"
-                if self.variation
-                else ""
+                if self.variation and self.runner.split_worlds
+                else f"{self.title} - {id}"
             )
             if self.index not in self.output.sources:
                 self.output.sources[self.index] = {}
@@ -415,7 +419,7 @@ class World(ABC):
             if source.set_index:
                 self.output.sources[self.index][id][source.set_index] = source
 
-        # TODO fix threading
+        # TODO maybe fix threading, for now, no auto stopping: you have to close the web page and stop the Python program.
         if self.stop_server:
             sleep(10)
             pid = getpid()

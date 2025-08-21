@@ -100,10 +100,8 @@ class Patient(Entity):
         self.illness = illness
         self.treatment_time = treatment_time
         options = PlotOptions(
-            title="Patients",
             auto_name=True,
-            aggregate_only=True,
-            plot_type=PlotType.export_only,
+            plot_type=PlotType.none,
         )
         super().__init__(world, name, WaitingPatientState, True, "Patients", options)
 
@@ -117,3 +115,7 @@ class Patient(Entity):
         ):
             return TreatedPatientState
         return new_state
+
+    def __repr__(self) -> str:
+        """Get a string representation of the Patient."""
+        return f"{self.__class__.__name__} {self.id}, {self.illness} (T {self.treatment_time:.1f} C {f"{self.critical_time:.1f}" if self.critical_time else "None"})"

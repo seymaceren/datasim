@@ -1,4 +1,4 @@
-from typing import Dict, Final, Generic, List, Tuple, TypeVar
+from typing import Callable, Dict, Final, Generic, List, Tuple, TypeVar
 
 from .entity import Entity
 from .logging import log
@@ -109,8 +109,7 @@ class Queue(Generic[EntityType]):
             and plot_options.plot_type != PlotType.export_only
         ):
             plot_options.plot_type = PlotType.none
-        elif plot_options.plot_type == PlotType.none:
-            plot_options.plot_type = PlotType.line
+
         if data_id == "":
             data_id = self.id
 
@@ -124,7 +123,7 @@ class Queue(Generic[EntityType]):
         Args:
             entity (T): The entity to enqueue.
                 Beware: If this entity is already in the list, it will be added another time.
-            amount (int or float, optional): The amount that the entity wants to take from the resource.
+            amount (int or float, optional): The amount that the entity wants to take from a resource.
                 Defaults to None.
 
         Returns:
@@ -143,14 +142,14 @@ class Queue(Generic[EntityType]):
                 world=self.world,
             )
 
-            self.queue.insert(0, (entity, amount))
+            self.queue.append((entity, amount))
             self.changed_tick = self.world.ticks
 
             return True
 
         return False
 
-    def dequeue(self) -> EntityType | Tuple[EntityType, Number] | None:
+    def dequeue(self) -> Tuple[EntityType, Number] | None:
         """Remove the entity from the front of the queue and returns it.
 
         Returns:
@@ -159,7 +158,7 @@ class Queue(Generic[EntityType]):
         if len(self.queue) == 0:
             return None
 
-        (e, a) = self.queue.pop()
+        (e, a) = self.queue.pop(0)
         self.changed_tick = self.world.ticks
 
         log(
@@ -168,11 +167,9 @@ class Queue(Generic[EntityType]):
             45,
         )
 
-        if a is None:
-            return e
         return (e, a)
 
-    def peek(self) -> EntityType | None:
+    def peek(self) -> Tuple[EntityType, Number] | None:
         """Return the entity at the front of the queue without removing it.
 
         Returns:
@@ -181,35 +178,38 @@ class Queue(Generic[EntityType]):
         if len(self.queue) == 0:
             return None
 
-        (e, a) = self.queue[-1]
-        return e
+        return self.queue[0]
 
-    def peek_with_amount(self) -> Tuple[EntityType, Number] | None:
-        """Return the entity at the front of the queue without removing it.
+    def enqueue_prioritized(
+        self,
+        sort_function: Callable[[EntityType, EntityType], bool],
+        entity: EntityType,
+        amount: Number = None,
+        highest_first: bool = False,
+    ) -> bool:
+        """Pushes an entity to a sorted place in the queue.
+        Beware: this will not work after using normal enqueue, the queue list has to be sorted already.
+        Easy to remember is to only use either `enqueue()` or `enqueue_prioritized()` on any single Queue.
 
-        Returns:
-            Entity: The entity at the front of this queue.
-        """
-        if len(self.queue) == 0:
-            return None
-
-        return self.queue[-1]
-
-    def queue_prioritized(self, entity: EntityType, sort_function) -> bool:
-        """Pushes an entity to a sorted place in the list
+        Note: this does a live comparison between the new entity and all entities already in the queue until
+            it finds its insertion position, which can become an expensive operation!
 
         Args:
-            entity (Entity): _description_
-            sort_function (lambda): _function that evaluates to a __gt__ comparable type
+            entity (Entity): The entity to add
+            sort_function (lambda): function that evaluates to a `__gt__()` comparable type
+            highest_first: If true, the highest value out of the sort function goes first instead of the lowest.
         """
-        (_, entry) = [
-            (i, (e, a)) for i, (e, a) in enumerate(self.queue) if e is entity
-        ][0]
-        # TODO: change
-        if self.queue.remove(entry):
-            self.queue.append(entry)
-            self.changed_tick = self.world.ticks
-            return True
+        index: int = 0
+        for i, (e, _) in enumerate(self.queue):
+            index = i
+            if sort_function(entity, e) if highest_first else sort_function(e, entity):
+                break
+            index = i + 1
+
+        if index < len(self.queue):
+            log(f"Enqueueing {entity} at index {index}", LogLevel.debug, "magenta")
+
+        self.queue.insert(index, (entity, amount))
 
         return False
 

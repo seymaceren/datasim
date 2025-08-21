@@ -20,7 +20,7 @@ class StreamlitDashboard(Output):
     frames: Dict[int, Dict[str, DeltaGenerator]]
     world_index: int
 
-    def __init__(self):
+    def __init__(self, runner, split_worlds: bool):
         """Create dashboard using Streamlit."""
         st.session_state.dashboard = self
 
@@ -29,7 +29,7 @@ class StreamlitDashboard(Output):
         self.frames = {}
         self.world_index = 0
 
-        super().__init__()
+        super().__init__(runner, split_worlds)
 
     def _add_world(self, world: int):
         super()._add_world(world)
@@ -365,37 +365,43 @@ class StreamlitDashboard(Output):
             for index in self.sources:
                 if (
                     index < 0
-                    and Output.aggregated_title(source_id) in self.sources[index]
+                    and Output._aggregated_title(source_id) in self.sources[index]
                 ):
-                    self._draw_plot(index, Output.aggregated_title(source_id))
+                    self._draw_plot(index, Output._aggregated_title(source_id))
 
     def _draw_plot(self, world_index, source_id):
         if source_id not in self.frames[world_index]:
             self.frames[world_index][source_id] = st.empty()
 
-        log(f"Update plot {source_id}", LogLevel.verbose)
-
         with self.frames[world_index][source_id].container():
+            svg_bytes = None
+            svg_name = None
             if source_id in self.plots[world_index]:
                 st.plotly_chart(self.plots[world_index][source_id])
+                svg_name = f"{self.dataframe_names[world_index][source_id]}.svg"
+                svg_bytes = self.plots[world_index][source_id].to_image(format="svg")
 
             any_data = False
             export_only = True
             for source in self.sources[world_index][source_id].values():
                 if source.options.plot_type != PlotType.none:
+                    if not any_data:
+                        log(f"Update plot {source_id}", LogLevel.verbose)
                     any_data = True
                 if source.options.plot_type != PlotType.export_only:
                     export_only = False
 
-            st.markdown(
-                f"**{source_id}** (Export only)"
-                if export_only
-                else f"Export {source_id}"
-            )
-
             if any_data:
-                col1, col2 = st.columns([0.2, 0.7])
-                path_p, file_p = self.export_pickle(world_index, source_id)
+                st.markdown(
+                    f"**{source_id}** (Export only)"
+                    if export_only
+                    else f"Export {source_id}"
+                )
+
+                col1, col2, col3 = st.columns([0.2, 0.2, 0.5])
+                path_p, file_p = self.export_pickle(
+                    world_index if self.split_worlds else None, source_id
+                )
                 col1.download_button(
                     label="Pickle",
                     data=file_p,
@@ -404,7 +410,9 @@ class StreamlitDashboard(Output):
                     icon=":material/download:",
                     key=f"{world_index},{source_id},P",
                 )
-                path_c, file_c = self.export_csv(world_index, source_id)
+                path_c, file_c = self.export_csv(
+                    world_index if self.split_worlds else None, source_id
+                )
                 col2.download_button(
                     label="CSV",
                     data=file_c,
@@ -413,3 +421,12 @@ class StreamlitDashboard(Output):
                     icon=":material/download:",
                     key=f"{world_index},{source_id},C",
                 )
+                if svg_bytes:
+                    col3.download_button(
+                        label="SVG",
+                        data=svg_bytes,
+                        file_name=svg_name,
+                        mime="image/svg",
+                        icon=":material/download:",
+                        key=f"{world_index},{source_id},S",
+                    )

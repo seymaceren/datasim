@@ -24,6 +24,8 @@ if not world_class:
     -d / --debug: print debug output
     -v / --verbose: print all verbose output
     -o=<path> / --out-path=<path>: save output in the specified directory
+    -s / --split-worlds: split output into one file per run
+    --clear-output: first delete anything in the specified output directory (use with caution!)
     -c / --csv: save csv output instead of Pickle"""
     )
     exit()
@@ -50,6 +52,10 @@ elif "-d" in argv or "--debug" in argv:
 
 output_csv = "-c" in argv or "--csv" in argv
 
+split_worlds = "-s" in argv or "--split-worlds" in argv
+
+clear_output = "--clear-output" in argv
+
 
 if "streamlit" in modules:
     import streamlit as st
@@ -57,7 +63,11 @@ if "streamlit" in modules:
     if "runner" not in st.session_state:
         st.session_state.update_time = 1.0
         st.session_state.runner = Runner(
-            world_class_object, auto_output_path=output_path, auto_output_csv=output_csv
+            world_class_object,
+            auto_output_path=output_path,
+            clear_auto_output_path=clear_output,
+            auto_output_csv=output_csv,
+            split_worlds=split_worlds,
         )
 
     any_active = st.session_state.runner.simulate(stop_server=False)
@@ -74,5 +84,6 @@ else:
         world_class_object,
         headless=True,
         auto_output_path=output_path,
+        clear_auto_output_path=clear_output,
         auto_output_csv=output_csv,
     ).simulate()
