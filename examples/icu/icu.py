@@ -82,7 +82,7 @@ class ICU(World):
             else:
                 queue_string = " // ".join(
                     [
-                        f"{p.id} {p.illness} {f"{p.critical_time:.1f}" if p.critical_time else "None"}"
+                        f"{p.id} {p.illness} {p.critical_time:.1f}"
                         for p, _ in self.patients_waiting.queue
                     ]
                 )

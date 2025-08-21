@@ -265,7 +265,7 @@ class World(ABC):
         elif isinstance(destination, Constant):
             destination.value = value
 
-    def constant(self, *keys) -> Value:
+    def constant(self, *keys) -> Constant:
         """Get a constant from the current simulation."""
         key = ":".join(keys)
         constant = self.constants.get(

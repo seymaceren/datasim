@@ -1,3 +1,4 @@
+from math import inf
 from typing import List, Optional
 from datasim import (
     Entity,
@@ -23,9 +24,9 @@ class WaitingPatientState(State):
         )
 
         self.patient.critical_time = (
-            self.patient.world.time + float(critical_duration)
+            (self.patient.world.time + float(critical_duration))
             if critical_duration.value is not None
-            else None
+            else inf
         )
         log(
             f"{self.patient} will be critical at time {self.patient.critical_time}",
@@ -34,10 +35,7 @@ class WaitingPatientState(State):
         )
 
     def tick(self):
-        if (
-            self.patient.critical_time is not None
-            and self.patient.world.time >= self.patient.critical_time
-        ):
+        if self.patient.world.time >= self.patient.critical_time:
             self.patient.state = DiedPatientState
 
 
@@ -94,7 +92,7 @@ class Patient(Entity):
     treatment_time: float
     illness: str
 
-    critical_time: Optional[float] = None
+    critical_time: float = inf
 
     def __init__(self, world, name, illness: str, treatment_time: float):
         self.illness = illness
@@ -118,4 +116,4 @@ class Patient(Entity):
 
     def __repr__(self) -> str:
         """Get a string representation of the Patient."""
-        return f"{self.__class__.__name__} {self.id}, {self.illness} (T {self.treatment_time:.1f} C {f"{self.critical_time:.1f}" if self.critical_time else "None"})"
+        return f"{self.__class__.__name__} {self.id}, {self.illness} (T {self.treatment_time:.1f} C {self.critical_time:.1f})"
