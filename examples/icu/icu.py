@@ -1,5 +1,4 @@
 from csv import reader
-from math import inf
 from typing import Any, Dict, List, Optional
 
 import pandas as pd
@@ -10,7 +9,6 @@ from .patient import (
     PatientData,
     Patient,
     TreatedPatientState,
-    WaitingPatientState,
 )
 
 

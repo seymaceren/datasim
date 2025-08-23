@@ -154,7 +154,7 @@ class Runner:
                 for selector, value in batch.items():
                     try:
                         world._set_variation(selector, value)
-                    except:
+                    except Exception:
                         raise AttributeError(
                             f"Variation {selector} could not be found or set to {value}!"
                         )

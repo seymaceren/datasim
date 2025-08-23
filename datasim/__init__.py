@@ -3,31 +3,33 @@
 from .constant import Constant
 from .dataset import (
     CategoryData,
+    DataFrameData,
     Dataset,
     DataSource,
     NPData,
-    PlotOptions,
     QueueData,
     ResourceData,
     StateData,
     XYData,
 )
 from .entity import Entity, State
-from .generator import Generator
+from .generator import Generator, Sampler, StaticSampler, DistributionSampler
 from .logging import log
 from .output import Output, SimpleFileOutput
 from .quantity import Quantity
 from .queue import Queue
 from .resource import Resource, UsingResourceState
 from .runner import Runner
-from .types import LogLevel, PlotType, UseResult
+from .types import LogLevel, PlotOptions, PlotType, UseResult
 from .world import World
 
 __all__ = (
     "CategoryData",
     "Constant",
+    "DataFrameData",
     "Dataset",
     "DataSource",
+    "DistributionSampler",
     "Entity",
     "Generator",
     "log",
@@ -42,9 +44,11 @@ __all__ = (
     "Resource",
     "ResourceData",
     "Runner",
+    "Sampler",
     "SimpleFileOutput",
     "State",
     "StateData",
+    "StaticSampler",
     "UseResult",
     "UsingResourceState",
     "World",

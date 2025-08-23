@@ -89,7 +89,7 @@ class Entity(ABC):
             and plot_options.plot_type != PlotType.export_only
         ):
             plot_options.plot_type = PlotType.none
-        
+
         if data_id == "":
             data_id = str(self)
 

@@ -110,7 +110,7 @@ class Quantity:
             and plot_options.plot_type != PlotType.export_only
         ):
             plot_options.plot_type = PlotType.none
-        
+
         if plot_options.legend_x == "":
             plot_options.legend_x = self.world.time_unit
         if plot_options.legend_y == "":

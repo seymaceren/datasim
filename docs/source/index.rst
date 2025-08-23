@@ -11,6 +11,8 @@ This library provides a framework for generating data by running simulations.
    :members:
    datasim.DataSource
    :members:
+   datasim.DataFrameData
+   :members:
    datasim.XYData
    :members:
    datasim.CategoryData
@@ -26,6 +28,14 @@ This library provides a framework for generating data by running simulations.
    datasim.Entity
    :members:
    datasim.State
+   :members:
+   datasim.Generator
+   :members:
+   datasim.Sampler
+   :members:
+   datasim.StaticSampler
+   :members:
+   datasim.DistributionSampler
    :members:
    datasim.logging
    :members:

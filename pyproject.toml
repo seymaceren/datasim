@@ -25,4 +25,6 @@ dependencies = [
     "sphinx>=8.2.3",
     "streamlit>=1.43.2",
     "webcolors>=24.11.1",
+    "flatdict>=4.0.1",
+    "kaleido>=1.0.0",
 ]

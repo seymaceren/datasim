@@ -3,31 +3,56 @@ tpu: 5
 time_unit: hours
 headless: false
 
+# 'batches' defines the differently parameterised runs.
 batches:
+# Use 'single' to define a list of single runs with their own overriden parameters;
+# Use 'grid' to define a list or range of values per parameter and get a run for each
+#   possible combination of those parameter values.
 - grid:
   - beds.slots:
+      # 'range' goes from first to second value, inclusive, increasing by 'step'.
+      #   So, for this example the values will be 4, 8, 12, 16 and 20.
       range: [4, 20]
       step: 4
+    # without range, each value is one variation; so here, only 10 and 20.
     patient_generator.subsets.A.treatment_time: [10, 20]
+# 'runs_per_batch' lets the simulation run multiple times for each combination of parameters.
+#   In this example, that means that 5 x 2 x 3 = 30 simulations will be run.
+#   (beds.slots x patient_generator.subsets.A.treatment_time x runs_per batch)
 runs_per_batch: 3
 
+# 'generators' can generate data of any defined data class.
 generators:
+  # The generator's name can be referenced in batch settings.
   - patient_generator:
+      # The data class to generate.
       class: PatientData
+      # Define a key for creating different subsets of objects keyed on that property.
       key: illness
       subsets:
+        # Each subset has parameters that will be sampled from a constant or a distribution.
         - illness: A
+          # Any sampled parameter can 'accumulate' samples, or use 'independent' samples.
           enter_time:
             sample: accumulate
+            # Use 'value' with 'accumulate' to add a constant value to each new object.
             value: 12
+          # A subset can also simply define a fixed constant value for any property.
           treatment_time: 24
         - illness: B
           enter_time:
             sample: accumulate
+            # When using 'distribution', any distribution from NumPy's random.Generator
+            #   can be specified, using the named parameters from the numpy library.
+            #   E.g.: 'uniform' with 'low' and 'high'; 'normal' with 'loc' and 'scale';
+            #   'binomial' with 'n' and 'p'; 'poisson' with 'lam'; or any other.
+            #   See: https://numpy.org/doc/stable/reference/random/generator.html#distributions
             distribution: normal
             parameters:
               loc: 12
               scale: 2
+            # The generated random values can be clamped using 'min' and/or 'max' values,
+            #   and the resulting values scaled using 'scaling'.
             min: 1
           treatment_time:
             sample: independent
@@ -52,12 +77,19 @@ generators:
               low: 24
               high: 96
 
+# Constants are values specified outside the implemented class, that can be referenced in
+#   batch settings, and read from the instanced World.
+#   They can be int, float, string or null/~ values (null/~ become None in Pyton).
 constants:
   - critical_duration:
       A: ~
       B: 400
       C: 200
 
+# For Resources, Queues and Quantities, plots with identical 'data_id' will be put in one figure;
+#   'plot_options' can include any options for the plotly figure.
+
+# Specify resources as documented on the Resource class.
 resources:
   - beds:
       resource_type: bed
@@ -71,6 +103,7 @@ resources:
         legend_y: beds
         secondary_y: true
 
+# Specify queues as documented on the Queue class.
 queues:
   - patients_waiting:
       data_id: ICU
@@ -80,6 +113,7 @@ queues:
         plot_color: orange
         legend_y: patients
 
+# Specify quantities as documented on the Quantity class.
 quantities:
   - patients_treated:
       quantity_type: patient

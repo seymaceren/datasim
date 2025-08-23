@@ -419,7 +419,8 @@ class World(ABC):
             if source.set_index:
                 self.output.sources[self.index][id][source.set_index] = source
 
-        # TODO maybe fix threading, for now, no auto stopping: you have to close the web page and stop the Python program.
+        # TODO maybe fix threading, for now, no auto stopping:
+        #   you have to close the web page and stop the Python program.
         if self.stop_server:
             sleep(10)
             pid = getpid()

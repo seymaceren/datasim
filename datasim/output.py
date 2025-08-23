@@ -1,6 +1,5 @@
 from abc import ABC
 from os import mkdir, path
-from re import split
 import shutil
 from pandas import DataFrame
 import pickle

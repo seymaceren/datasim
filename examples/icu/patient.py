@@ -1,5 +1,5 @@
 from math import inf
-from typing import List, Optional
+from typing import List
 from datasim import (
     Entity,
     log,
@@ -116,4 +116,7 @@ class Patient(Entity):
 
     def __repr__(self) -> str:
         """Get a string representation of the Patient."""
-        return f"{self.__class__.__name__} {self.id}, {self.illness} (T {self.treatment_time:.1f} C {self.critical_time:.1f})"
+        return (
+            f"{self.__class__.__name__} {self.id}, {self.illness} "
+            "(T {self.treatment_time:.1f} C {self.critical_time:.1f})"
+        )

@@ -18,10 +18,10 @@ def test_world_headless():
 
 def test_world_dashboard():
     logging.level = LogLevel.debug
-    dashboard = StreamlitDashboard()
+    runner = Runner(World)
+    dashboard = StreamlitDashboard(runner, False)
     dashboard._draw()
     assert hasattr(dashboard, "plots")
-    runner = Runner(World)
     world = runner.worlds[0]
     world.tpu = 0.5
     assert world.tpu == 0.5
