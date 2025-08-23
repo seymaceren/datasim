@@ -155,6 +155,10 @@ class Entity(ABC):
                 self._state.tick()
         self.ticks_in_current_state += 1
 
+    @property
+    def time_in_current_state(self) -> float:
+        return self.ticks_in_current_state / self.world.tpu
+
     def _change_state(self, new_state: "State | None"):
         if self._state == new_state:
             return

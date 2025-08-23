@@ -278,6 +278,8 @@ class Resource:
 
     def usage_tick(self, user: Entity) -> bool:
         """Override this function for more complex usage time than a flat number of time units."""
+        if user not in self.users:
+            return False
         index = self.user_index[user]
         left = self.simple_time_left[index]
         left -= self.world.tick_time
