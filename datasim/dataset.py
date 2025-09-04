@@ -338,6 +338,7 @@ class StateData(DataSource):
         super().__init__(world, plot_options)
         self.source = source
         self.source._link_output(self)
+        self._last_state = None
         self.frequency = frequency
         self._y_buffer = np.full(self._buffer_size, "", dtype=object)
 
@@ -345,7 +346,7 @@ class StateData(DataSource):
         if self._stopped:
             return
 
-        if (self.frequency == 0 and self.source.ticks_in_current_state <= 1) or (
+        if (self.frequency == 0 and self._last_state != self.source.state) or (
             self.frequency > 0 and self.world.ticks % self.frequency == 0
         ):
             if len(self._x_buffer) <= self._buffer_index:
@@ -356,6 +357,7 @@ class StateData(DataSource):
             self._x_buffer[self._buffer_index] = self.world.time
             self._y_buffer[self._buffer_index] = self.source.state.type_id
             self._buffer_index += 1
+            self._last_state = self.source.state
 
 
 class Dataset:

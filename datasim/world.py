@@ -379,14 +379,18 @@ class World(ABC):
         while (self.end_tick == 0 or self.ticks < self.end_tick) and not self.stopped:
             self.before_entities_update()
 
-            for entity in self.entities:
+            elist = list(self.entities)
+
+            for entity in elist:
                 entity._tick()
-            for quantity in self.quantities.values():
+            for entity in elist:
+                entity._check_state()
+            for quantity in list(self.quantities.values()):
                 quantity._tick()
 
             self.after_entities_update()
 
-            for plot in self.datasets.values():
+            for plot in list(self.datasets.values()):
                 plot._tick()
 
             self.ticks += 1

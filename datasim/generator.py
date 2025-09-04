@@ -3,7 +3,8 @@ from typing_extensions import Literal
 from git import List
 import numpy as np
 
-from .types import Number, Value
+from .logging import log
+from .types import LogLevel, Number, Value
 
 
 class Sampler:
@@ -14,12 +15,12 @@ class Sampler:
         property: str,
         min: float | None = None,
         max: float | None = None,
-        scale: float = 1.0,
+        scaling: float = 1.0,
     ):
         self.property = property
         self.min = min
         self.max = max
-        self.scale = scale
+        self.scaling = scaling
         self.first = True
 
     @staticmethod
@@ -31,11 +32,11 @@ class Sampler:
                 return StaticSampler(
                     property,
                     params["value"],
-                    params.get("sample", "independent") == "accumulate",
+                    params.get("sample", "absolute") == "cumulative",
                     params.get("start", None),
                     params.get("min", None),
                     params.get("max", None),
-                    params.get("scale", 1.0),
+                    params.get("scaling", 1.0),
                 )
 
             if "distribution" in params:
@@ -43,11 +44,12 @@ class Sampler:
                     property,
                     params["distribution"],
                     params.get("parameters", {}),
-                    params.get("sample", "independent"),
+                    params.get("sample", "absolute"),
                     params.get("start", None),
                     params.get("min", None),
                     params.get("max", None),
-                    params.get("scale", 1.0),
+                    params.get("width", 1.0),
+                    params.get("scaling", 1.0),
                 )
 
             return StaticSampler(property, None)
@@ -69,9 +71,9 @@ class StaticSampler(Sampler):
         start: Value = None,
         min: float | None = None,
         max: float | None = None,
-        scale: float = 1.0,
+        scaling: float = 1.0,
     ):
-        super().__init__(property, min, max, scale)
+        super().__init__(property, min, max, scaling)
         self.accumulate = accumulate
         self.value = start if start else 0.0 if isinstance(value, float) else 0
         self.step = value
@@ -87,13 +89,18 @@ class StaticSampler(Sampler):
             ):
                 self.value += self.step
         return (
-            self.value if not isinstance(self.value, float) else self.scale * self.value
+            self.value
+            if not isinstance(self.value, float)
+            else self.scaling * self.value
         )
 
 
 class DistributionSampler(Sampler):
     value: float
-    accumulate: bool
+    accumulate: Literal["absolute", "cumulative", "binned"]
+    width: float
+    current_bin: float
+    samples_left: int
     rng: np.random.Generator
     np_function: Any
     parameters: Dict
@@ -103,33 +110,49 @@ class DistributionSampler(Sampler):
         property: str,
         np_generator: str,
         parameters: Dict,
-        accumulation: Literal["independent", "accumulate"],
+        accumulation: Literal["absolute", "cumulative", "binned"],
         start: Optional[float] = None,
         min: float | None = None,
         max: float | None = None,
-        scale=1.0,
+        width=1.0,
+        scaling=1.0,
     ):
-        super().__init__(property, min, max, scale)
-        self.accumulate = accumulation == "accumulate"
+        super().__init__(property, min, max, scaling)
+        self.accumulate = accumulation
         self.rng = np.random.default_rng()
         self.np_function = getattr(self.rng, np_generator)
         self.parameters = parameters
+        self.width = width
+        self.current_bin = (start if start else 0.0) - width
+        self.samples_left = 0
         self.value = start if start else self.sample()
 
     def sample(self) -> float:
-        value = self.np_function(**self.parameters)
-        if self.min and value < self.min:
-            return self.min
-        if self.max and value > self.max:
-            return self.max
-        return self.scale * value
+        if self.accumulate == "binned":
+            while self.samples_left <= 0:
+                self.current_bin += self.width
+                value = self.np_function(**self.parameters)
+                if self.min and value < self.min:
+                    value = self.min
+                if self.max and value > self.max:
+                    value = self.max
+                self.samples_left = round(value)
+            self.samples_left -= 1
+            return self.scaling * self.current_bin
+        else:
+            value = self.np_function(**self.parameters)
+            if self.min and value < self.min:
+                value = self.min
+            if self.max and value > self.max:
+                value = self.max
+            return self.scaling * value
 
     def next(self) -> Value:
         if self.first:
             self.first = False
         else:
             sample = self.sample()
-            if not self.accumulate:
+            if not self.accumulate == "cumulative":
                 return sample
 
             self.value += sample
@@ -200,14 +223,17 @@ class Generator:
                         (compare == ">" and value > limit)
                         or (compare == "<" and value < limit)
                     ):
+                        id -= 1
                         break
 
                 else:
+                    log(f"{next}", LogLevel.debug)
                     data.append(next)
 
                     if count > 0:
                         count -= 1
                         if count == 0:
+                            id -= 1
                             break
                     continue
 

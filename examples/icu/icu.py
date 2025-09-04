@@ -41,7 +41,7 @@ class ICU(World):
         if runner.data_source:
             self.load_patient_data(runner.data_source)
         else:
-            self.generate_patient_data(500)
+            self.generate_patient_data(float(self.constant("end_enter_time")))
 
     def load_patient_data(self, filename: str):
         self.patients = []

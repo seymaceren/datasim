@@ -19,6 +19,7 @@ class Entity(ABC):
     id: Final[str]
     index: Final[int]
     _state: "State | None" = None
+    _switch: "State | None" = None
     _outputs: Final
     ticks_in_current_state: int
     location: Optional[np.typing.NDArray[np.float64]]
@@ -56,6 +57,8 @@ class Entity(ABC):
         if self.state:
             self.state.switch_to = self.state
             self.state.entity = self
+
+        self._check_state()
 
         self.ticks_in_current_state = 0
 
@@ -138,7 +141,7 @@ class Entity(ABC):
         if self._state:
             self._state.switch_to = new_state
         else:
-            self._change_state(new_state)
+            self._switch = new_state
 
     def _get_state(self) -> "State | None":
         return self._state
@@ -149,11 +152,14 @@ class Entity(ABC):
 
     def _tick(self):
         if self._state:
-            if self._state.switch_to != self._state:
-                self._change_state(self._state.switch_to)
-            if self._state:
-                self._state.tick()
-        self.ticks_in_current_state += 1
+            self._state.tick()
+            self.ticks_in_current_state += 1
+
+    def _check_state(self):
+        if self._state and self._state.switch_to != self._state:
+            self._change_state(self._state.switch_to)
+        elif self._state is None and self._switch is not None:
+            self._change_state(self._switch)
 
     @property
     def time_in_current_state(self) -> float:
@@ -164,6 +170,7 @@ class Entity(ABC):
             return
 
         if self._state:
+            self._state.on_leave()
             new_state = self._bind_state(self.on_state_leaving(self._state, new_state))
 
         log(
@@ -175,9 +182,11 @@ class Entity(ABC):
         self.changed_tick = self.world.ticks
 
         self._state = new_state
+        self._switch = None
         if self._state:
             self._state.switch_to = self._state
             if self._state:
+                self._state.on_enter()
                 self.on_state_entered(self._state, new_state)
 
         self.ticks_in_current_state = 0
@@ -264,6 +273,16 @@ class State(ABC):
     def tick(self):
         """Implement this function to have the state execute any behavior \
             for its entity."""
+        pass
+
+    def on_enter(self):
+        """Implement this function to have the state execute any behavior \
+            for its entity when it enters this state."""
+        pass
+
+    def on_leave(self):
+        """Implement this function to have the state execute any behavior \
+            for its entity when it leaves this state."""
         pass
 
     def __eq__(self, object):

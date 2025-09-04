@@ -35,7 +35,9 @@ class WaitingPatientState(State):
         )
 
     def tick(self):
-        if self.patient.world.time >= self.patient.critical_time:
+        if self.patient.world.time >= self.patient.critical_time - (
+            self.patient.world.tick_time * 0.01
+        ):
             self.patient.state = DiedPatientState
 
 
@@ -62,13 +64,15 @@ class DiedPatientState(State):
         super().__init__("Died", patient)
         self.patient = patient
 
-    def tick(self):
+    def on_enter(self):
         log(
             f"{self.patient} died of illness {self.patient.illness}!",
             LogLevel.debug,
             "red",
             world=self.entity.world,
         )
+
+    def tick(self):
         self.entity.remove()
 
 
@@ -84,6 +88,12 @@ class PatientData:
             self.enter_time = float(data[1])
             self.treatment_time = float(data[2])
             self.illness = data[3]
+
+    def __repr__(self) -> str:
+        return (
+            f"{self.__class__.__name__} {self.id}, {self.illness}, "
+            f"E {self.enter_time:.1f}, T {self.treatment_time:.1f}"
+        )
 
 
 class Patient(Entity):
@@ -118,5 +128,5 @@ class Patient(Entity):
         """Get a string representation of the Patient."""
         return (
             f"{self.__class__.__name__} {self.id}, {self.illness} "
-            "(T {self.treatment_time:.1f} C {self.critical_time:.1f})"
+            f"(T {self.treatment_time:.1f} C {self.critical_time:.1f})"
         )

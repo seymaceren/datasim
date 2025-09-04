@@ -32,16 +32,17 @@ generators:
       subsets:
         # Each subset has parameters that will be sampled from a constant or a distribution.
         - illness: A
-          # Any sampled parameter can 'accumulate' samples, or use 'independent' samples.
+          # Any sampled parameter can take 'cumulative' samples, or use 'absolute' or 'binned'.
           enter_time:
-            sample: accumulate
-            # Use 'value' with 'accumulate' to add a constant value to each new object.
+            # With 'cumulative', each number is the last generated number plus the sampled value.
+            sample: cumulative
+            # Use 'value' with 'cumulative' to add a constant value to each new object.
             value: 12
           # A subset can also simply define a fixed constant value for any property.
           treatment_time: 24
         - illness: B
           enter_time:
-            sample: accumulate
+            sample: cumulative
             # When using 'distribution', any distribution from NumPy's random.Generator
             #   can be specified, using the named parameters from the numpy library.
             #   E.g.: 'uniform' with 'low' and 'high'; 'normal' with 'loc' and 'scale';
@@ -55,7 +56,7 @@ generators:
             #   and the resulting values scaled using 'scaling'.
             min: 1
           treatment_time:
-            sample: independent
+            sample: absolute
             distribution: normal
             parameters:
               loc: 96
@@ -63,15 +64,24 @@ generators:
             min: 1
         - illness: C
           enter_time:
-            sample: accumulate
-            distribution: normal
+            # With 'binned', the number is taken as a count per bin with a width specified by 'width'.
+            #   Note: The floor value of each bin is used as output for each instance in that bin.
+            #   E.g.: a distribution sample of 3 with a width of 1 when the sampler is on the third bin,
+            #   will yield 3 objects with value 2.0.
+            sample: binned
+            width: 1
+            distribution: poisson
             parameters:
-              loc: 60
-              scale: 30
-            min: 1
+              lam: 0.05
+            # With 'binned', the 'min' and 'max' values work on the distribution samples (with an
+            #   automatic minimum value of 0), while 'scaling' is done on the output value.
+            #   In this example, there will be an average 0.05 objects per 1 (time) unit, but the
+            #   output time is scaled by 0.1 yielding 10x the objects per time, averaging 0.5.
+            max: 100
             scaling: 0.1
           treatment_time:
-            sample: independent
+            # With 'absolute', each sample is independently taken as output value.
+            sample: absolute
             distribution: uniform
             parameters:
               low: 24
@@ -83,8 +93,9 @@ generators:
 constants:
   - critical_duration:
       A: ~
-      B: 400
-      C: 200
+      B: 5
+      C: 12
+  - end_enter_time: 50
 
 # For Resources, Queues and Quantities, plots with identical 'data_id' will be put in one figure;
 #   'plot_options' can include any options for the plotly figure.
