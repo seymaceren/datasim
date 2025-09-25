@@ -1,110 +1,23 @@
 title: ICU
-tpu: 5
+tpu: 1
 time_unit: hours
 headless: false
 
-# 'batches' defines the differently parameterised runs.
-batches:
-# Use 'single' to define a list of single runs with their own overriden parameters;
-# Use 'grid' to define a list or range of values per parameter and get a run for each
-#   possible combination of those parameter values.
-- grid:
-  - beds.slots:
-      # 'range' goes from first to second value, inclusive, increasing by 'step'.
-      #   So, for this example the values will be 4, 8, 12, 16 and 20.
-      range: [4, 20]
-      step: 4
-    # without range, each value is one variation; so here, only 10 and 20.
-    patient_generator.subsets.A.treatment_time: [10, 20]
-# 'runs_per_batch' lets the simulation run multiple times for each combination of parameters.
-#   In this example, that means that 5 x 2 x 3 = 30 simulations will be run.
-#   (beds.slots x patient_generator.subsets.A.treatment_time x runs_per batch)
-runs_per_batch: 3
+# Pad naar de historische data
+data_source: "examples/icu/simulatiedata.csv"
 
-# 'generators' can generate data of any defined data class.
-generators:
-  # The generator's name can be referenced in batch settings.
-  - patient_generator:
-      # The data class to generate.
-      class: PatientData
-      # Define a key for creating different subsets of objects keyed on that property.
-      key: illness
-      subsets:
-        # Each subset has parameters that will be sampled from a constant or a distribution.
-        - illness: A
-          # Any sampled parameter can take 'cumulative' samples, or use 'absolute' or 'binned'.
-          enter_time:
-            # With 'cumulative', each number is the last generated number plus the sampled value.
-            sample: cumulative
-            # Use 'value' with 'cumulative' to add a constant value to each new object.
-            value: 12
-          # A subset can also simply define a fixed constant value for any property.
-          treatment_time: 24
-        - illness: B
-          enter_time:
-            sample: cumulative
-            # When using 'distribution', any distribution from NumPy's random.Generator
-            #   can be specified, using the named parameters from the numpy library.
-            #   E.g.: 'uniform' with 'low' and 'high'; 'normal' with 'loc' and 'scale';
-            #   'binomial' with 'n' and 'p'; 'poisson' with 'lam'; or any other.
-            #   See: https://numpy.org/doc/stable/reference/random/generator.html#distributions
-            distribution: normal
-            parameters:
-              loc: 12
-              scale: 2
-            # The generated random values can be clamped using 'min' and/or 'max' values,
-            #   and the resulting values scaled using 'scaling'.
-            min: 1
-          treatment_time:
-            sample: absolute
-            distribution: normal
-            parameters:
-              loc: 96
-              scale: 24
-            min: 1
-        - illness: C
-          enter_time:
-            # With 'binned', the number is taken as a count per bin with a width specified by 'width'.
-            #   Note: The floor value of each bin is used as output for each instance in that bin.
-            #   E.g.: a distribution sample of 3 with a width of 1 when the sampler is on the third bin,
-            #   will yield 3 objects with value 2.0.
-            sample: binned
-            width: 1
-            distribution: poisson
-            parameters:
-              lam: 0.05
-            # With 'binned', the 'min' and 'max' values work on the distribution samples (with an
-            #   automatic minimum value of 0), while 'scaling' is done on the output value.
-            #   In this example, there will be an average 0.05 objects per 1 (time) unit, but the
-            #   output time is scaled by 0.1 yielding 10x the objects per time, averaging 0.5.
-            max: 100
-            scaling: 0.1
-          treatment_time:
-            # With 'absolute', each sample is independently taken as output value.
-            sample: absolute
-            distribution: uniform
-            parameters:
-              low: 24
-              high: 96
-
-# Constants are values specified outside the implemented class, that can be referenced in
-#   batch settings, and read from the instanced World.
-#   They can be int, float, string or null/~ values (null/~ become None in Pyton).
+# Critical duration van patiënten in de queue voordat ze komen te overlijden
 constants:
   - critical_duration:
       A: ~
-      B: 5
-      C: 12
-  - end_enter_time: 50
+      B: 4
+      C: 2
 
-# For Resources, Queues and Quantities, plots with identical 'data_id' will be put in one figure;
-#   'plot_options' can include any options for the plotly figure.
-
-# Specify resources as documented on the Resource class.
+# Parameters van het scenario, slots: x definieert het aantal bedden
 resources:
   - beds:
       resource_type: bed
-      slots: 5
+      slots: 150
       data_id: ICU
       plot_options:
         title: ICU
@@ -114,7 +27,7 @@ resources:
         legend_y: beds
         secondary_y: true
 
-# Specify queues as documented on the Queue class.
+# Niet relevant
 queues:
   - patients_waiting:
       data_id: ICU
@@ -124,7 +37,6 @@ queues:
         plot_color: orange
         legend_y: patients
 
-# Specify quantities as documented on the Quantity class.
 quantities:
   - patients_treated:
       quantity_type: patient
