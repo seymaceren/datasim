@@ -61,3 +61,12 @@ After an initial version, I have more ideas to expand the functionalities:
 
 - Add a physics mode (using a library) to entities, so that it's possible to run more complex simulations
 - Show a live updating representation of a longer running simulation with physical representation
+
+## Instructies van Gillian
+
+Als je de datasim repo werkend wil krijgen en nog geen werkende environment hebt en/of het via je terminal wilt runnen kun je:
+
+1. Voor als je nog geen env hebt: Met conda een nieuwe environment maken via de yaml die bij dit bericht zit. Download en zet de yaml in de datasim folder. Nu moet je een cd in je terminal (command prompt) doen in de datasim map. De conda env maak je dan met: conda env create -f environment.yml
+2. Activeer je environment. Nu kun je de het dashboard runnen door het volgende commando uit te voeren: streamlit run datasim.py -- -v world=examples.icu.icu.ICU
+3. Als je een plotly chrome error krijgt moet je nog het volgende doen: Zorg eerst dat er niets meer runt met ctrl+c. Voer plotly_get_chrome in de conda terminal uit. Run het nu opnieuw en dan zou het moeten werken.
+4. Als je je environment wil toevoegen in PyCharm, zorg dat je PyCharm eerst opnieuw opstart zodat hij de environment herkent. Doe dan: add environment > existing environment > selecteer conda > en daarna de juist environment > klik op OK.
