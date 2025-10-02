@@ -1,0 +1,64 @@
+title: ICU
+tpu: 1
+time_unit: hours
+headless: false
+
+# Pad naar de historische data
+data_source: "examples/icu/simulatiedata.csv"
+
+# In onderstaande code kun je een grid definiëren om meerdere scenario's te simuleren
+batches:
+- grid:
+  - beds.slots:
+      range: [115, 215]
+      step: 25
+    
+constants:
+  - critical_duration:
+      A: ~
+      B: 4
+      C: 2
+
+# Onderstaande code is niet relevant
+# Merk op: slots: x wordt overschreven door de waardes in het grid
+resources:
+  - beds:
+      resource_type: bed
+      slots: 5
+      data_id: ICU
+      plot_options:
+        title: ICU
+        name: Beds in use
+        plot_type: line
+        plot_color: blue
+        legend_y: beds
+        secondary_y: true
+
+queues:
+  - patients_waiting:
+      data_id: ICU
+      plot_options:
+        name: Patients waiting
+        plot_type: line
+        plot_color: orange
+        legend_y: patients
+
+quantities:
+  - patients_treated:
+      quantity_type: patient
+      start_value: 0
+      data_id: ICU
+      plot_options:
+        name: Patients treated
+        plot_type: line
+        plot_color: green
+        legend_y: patients
+  - patients_died:
+      quantity_type: patient
+      start_value: 0
+      data_id: ICU
+      plot_options:
+        name: Patients died
+        plot_type: line
+        plot_color: red
+        legend_y: patients

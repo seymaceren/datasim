@@ -1,0 +1,58 @@
+title: ICU
+tpu: 1
+time_unit: hours
+headless: false
+
+# Pad naar de historische data
+data_source: "examples/icu/simulatiedata.csv"
+
+# Critical duration van patiënten in de queue voordat ze komen te overlijden
+constants:
+  - critical_duration:
+      A: ~
+      B: 4
+      C: 2
+
+# Parameters van het scenario, slots: x definieert het aantal bedden
+resources:
+  - beds:
+      resource_type: bed
+      slots: 150
+      data_id: ICU
+      plot_options:
+        title: ICU
+        name: Beds in use
+        plot_type: line
+        plot_color: blue
+        legend_y: beds
+        secondary_y: true
+
+# Niet relevant
+queues:
+  - patients_waiting:
+      data_id: ICU
+      plot_options:
+        name: Patients waiting
+        plot_type: line
+        plot_color: orange
+        legend_y: patients
+
+quantities:
+  - patients_treated:
+      quantity_type: patient
+      start_value: 0
+      data_id: ICU
+      plot_options:
+        name: Patients treated
+        plot_type: line
+        plot_color: green
+        legend_y: patients
+  - patients_died:
+      quantity_type: patient
+      start_value: 0
+      data_id: ICU
+      plot_options:
+        name: Patients died
+        plot_type: line
+        plot_color: red
+        legend_y: patients
