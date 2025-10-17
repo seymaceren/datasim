@@ -1,0 +1,127 @@
+title: ICU
+tpu: 1
+time_unit: hours
+headless: false
+
+batches:
+- grid:
+  - beds.slots:
+      # Dit zijn de scenario's: 180, 230 en 280
+      range: [180, 280]
+      step: 50
+# Het aantal runs_per_batch is het aantal runs per scenario
+runs_per_batch: 5
+
+# Met de generators kan synthetische data gegenereerd worden
+generators:
+  - patient_generator:
+      class: PatientData
+      key: illness
+      subsets:
+        # We definiëren data voor meerdere verschillende ziektes
+        - illness: A
+           # Voor elke ziekte genereren we data voor de aankomsttijd en later ook de ligtijd
+          enter_time:
+            # De aankomsttijd is binned omdat er meerdere aankomsten per tijdstip kunnen zijn
+            sample: binned
+            # Voor de aankomstijd en ligtijd kunnen NumPy distributions gebruikt worden met de bijbehorende parameters
+            # When using 'distribution', any distribution from NumPy's random.Generator
+            #   can be specified, using the named parameters from the numpy library.
+            #   E.g.: 'uniform' with 'low' and 'high'; 'normal' with 'loc' and 'scale';
+            #   'binomial' with 'n' and 'p'; 'poisson' with 'lam'; or any other.
+            #   See: https://numpy.org/doc/stable/reference/random/generator.html#distributions
+            distribution: poisson
+            parameters:
+              lam: 3
+            # Soms resulteren samples uit een distributie in negatieve waardes of 0, met min kan geclamped worden
+            min: 0
+          # De ligtijd kan een vaste waarde hebben
+          treatment_time: 36
+        - illness: B
+          enter_time:
+            sample: binned
+            distribution: uniform
+            # Wanneer bij uniform low en high hetzelfde is, heb je één waarde die altijd gebruikt wordt
+            parameters:
+              low: 1
+              high: 1
+          treatment_time:
+            # Voor de ligtijd moet je sample: absolute gebruiken
+            sample: absolute
+            distribution: normal
+            parameters:
+              loc: 24
+              scale: 6
+            min: 1
+        - illness: C
+          enter_time:
+            sample: binned
+            distribution: uniform
+            parameters:
+              low: 3
+              high: 5
+          # A subset can also simply define a fixed constant value for any property.
+          treatment_time:
+            sample: absolute
+            distribution: uniform
+            parameters:
+              low: 18
+              high: 24
+        
+
+# De critical_duration kun je ook weer bepalen hier
+constants:
+  - critical_duration:
+      A: ~
+      B: 2
+      C: 4
+  # De end_enter_time is de duur van je simulatie
+  - end_enter_time: 150
+
+# Onderstaande code is niet relevant
+# Merk op: slots: x wordt overschreven door de waardes in het grid
+
+# Specify resources as documented on the Resource class.
+resources:
+  - beds:
+      resource_type: bed
+      slots: 5
+      data_id: ICU
+      plot_options:
+        title: ICU
+        name: Beds in use
+        plot_type: line
+        plot_color: blue
+        legend_y: beds
+        secondary_y: true
+
+# Specify queues as documented on the Queue class.
+queues:
+  - patients_waiting:
+      data_id: ICU
+      plot_options:
+        name: Patients waiting
+        plot_type: line
+        plot_color: orange
+        legend_y: patients
+
+# Specify quantities as documented on the Quantity class.
+quantities:
+  - patients_treated:
+      quantity_type: patient
+      start_value: 0
+      data_id: ICU
+      plot_options:
+        name: Patients treated
+        plot_type: line
+        plot_color: green
+        legend_y: patients
+  - patients_died:
+      quantity_type: patient
+      start_value: 0
+      data_id: ICU
+      plot_options:
+        name: Patients died
+        plot_type: line
+        plot_color: red
+        legend_y: patients
