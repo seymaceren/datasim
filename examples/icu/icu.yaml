@@ -40,11 +40,9 @@ generators:
         - illness: B
           enter_time:
             sample: binned
-            distribution: lognormal
-            # Wanneer bij uniform low en high hetzelfde is, heb je één waarde die altijd gebruikt wordt
+            distribution: poisson
             parameters:
-              mean: 1.009347227607059
-              sigma: 0.46693002472722844
+              lam: 3              
           treatment_time:
             # Voor de ligtijd moet je sample: absolute gebruiken
             sample: absolute
@@ -56,11 +54,10 @@ generators:
         - illness: C
           enter_time:
             sample: binned
-            distribution: uniform
+            distribution: poisson
             parameters:
-              low: 1
-              high: 3
-          # A subset can also simply define a fixed constant value for any property.
+              lam: 2
+          
           treatment_time:
             sample: absolute
             distribution: uniform
@@ -76,7 +73,7 @@ constants:
       B: 2
       C: 4
   # De end_enter_time is de duur van je simulatie
-  - end_enter_time: 0.009
+  - end_enter_time: 150
 
 # Onderstaande code is niet relevant
 # Merk op: slots: x wordt overschreven door de waardes in het grid
