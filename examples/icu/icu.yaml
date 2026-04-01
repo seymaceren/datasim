@@ -54,9 +54,10 @@ generators:
         - illness: C
           enter_time:
             sample: binned
-            distribution: poisson
+            distribution: uniform
             parameters:
-              lam: 2
+              low: 1
+              high: 6
           
           treatment_time:
             sample: absolute
@@ -73,7 +74,7 @@ constants:
       B: 2
       C: 4
   # De end_enter_time is de duur van je simulatie
-  - end_enter_time: 150
+  - end_enter_time: 5
 
 # Onderstaande code is niet relevant
 # Merk op: slots: x wordt overschreven door de waardes in het grid
